@@ -7,3 +7,6 @@ export * from '@/lib/control-plane/store';
 export * from '@/lib/control-plane/jobs';
 export * from '@/lib/control-plane/brain-bridge';
 export * from '@/lib/control-plane/engine';
+export * from '@/lib/control-plane/durable-schema';
+export * from '@/lib/control-plane/durable';
+export * from '@/lib/control-plane/sqlite-store';
