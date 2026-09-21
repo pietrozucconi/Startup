@@ -10,3 +10,6 @@ export * from '@/lib/control-plane/engine';
 export * from '@/lib/control-plane/durable-schema';
 export * from '@/lib/control-plane/durable';
 export * from '@/lib/control-plane/sqlite-store';
+export * from '@/lib/control-plane/atomic-store';
+export * from '@/lib/control-plane/sqlite-atomic-store';
+export * from '@/lib/control-plane/atomic-engine';

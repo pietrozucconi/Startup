@@ -301,7 +301,7 @@ function rowToJob(
 export class SqliteControlPlaneStore
   implements ControlPlaneStore
 {
-  private readonly db: InstanceType<
+  protected readonly db: InstanceType<
     typeof Database
   >;
 
