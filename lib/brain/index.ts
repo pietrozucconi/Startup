@@ -9,3 +9,4 @@ export * from '@/lib/brain/reasoning';
 export * from '@/lib/brain/learning';
 export * from '@/lib/brain/events';
 export * from '@/lib/brain/graph-foundation';
+export * from '@/lib/brain/gateway';
