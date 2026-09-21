@@ -18,8 +18,7 @@ export default function SkillsPage() {
         </p>
 
         <p className="mt-2 text-sm leading-relaxed text-os-dim">
-          No legacy FounderOS, Claude or plugin skills are currently loaded
-          into the company workspace.
+          No external skill library is currently loaded into the company runtime.
         </p>
       </div>
 

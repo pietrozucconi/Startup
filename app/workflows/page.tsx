@@ -18,7 +18,7 @@ export default function WorkflowsPage() {
         </p>
 
         <p className="mt-2 text-sm leading-relaxed text-os-dim">
-          No legacy FounderOS workflows are loaded.
+          No operational workflows are currently registered.
         </p>
       </div>
 

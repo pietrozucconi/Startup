@@ -1,5 +1,4 @@
-export type CommsSource = 'email' | 'whatsapp' | 'slack';
-
+export type CommsSource = 'email' | 'slack';
 export type CommsItem = {
   source: CommsSource;
   title: string;

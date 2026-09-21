@@ -9,7 +9,6 @@ import {
   BroadcastReplySchema,
   BroadcastSchema,
   DepartmentSchema,
-  WorkflowSchema,
   SkillSchema,
   ToolSchema,
   type Agent,
@@ -20,7 +19,6 @@ import {
   type Broadcast,
   type BroadcastReply,
   type Department,
-  type Workflow,
   type Skill,
   type Tool,
 } from '@/lib/schemas';
@@ -103,14 +101,6 @@ CREATE TABLE IF NOT EXISTS broadcast_replies (
 );
 
 
-CREATE TABLE IF NOT EXISTS workflows (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  subtitle TEXT NOT NULL DEFAULT '',
-  revenue_usd INTEGER NOT NULL DEFAULT 0,
-  ord INTEGER NOT NULL DEFAULT 0,
-  steps TEXT NOT NULL DEFAULT '[]'
-);
 CREATE TABLE IF NOT EXISTS skills (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -402,34 +392,6 @@ export function openDb(path: string) {
     },
   };
 
-  const workflows = {
-    all(): Workflow[] {
-      return db
-        .prepare('SELECT * FROM workflows ORDER BY ord, name')
-        .all()
-        .map((r: any) =>
-          WorkflowSchema.parse({
-            id: r.id,
-            name: r.name,
-            subtitle: r.subtitle,
-            revenueUsd: r.revenue_usd,
-            order: r.ord,
-            steps: JSON.parse(r.steps),
-          }),
-        );
-    },
-    insert(w: Workflow): void {
-      WorkflowSchema.parse(w);
-      db.prepare(
-        'INSERT OR REPLACE INTO workflows (id, name, subtitle, revenue_usd, ord, steps) VALUES (?, ?, ?, ?, ?, ?)',
-      ).run(w.id, w.name, w.subtitle, w.revenueUsd, w.order, JSON.stringify(w.steps));
-    },
-    deleteWhereIdNotIn(ids: string[]): void {
-      const placeholders = ids.map(() => '?').join(', ');
-      db.prepare(`DELETE FROM workflows WHERE id NOT IN (${placeholders})`).run(...ids);
-    },
-  };
-
   const skills = {
     all(): Skill[] {
       return db
@@ -472,7 +434,6 @@ export function openDb(path: string) {
     agentTasks,
     agentCrons,
     broadcasts,
-    workflows,
     skills,
     close: () => db.close(),
   };

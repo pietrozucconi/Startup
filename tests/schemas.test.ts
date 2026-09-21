@@ -7,16 +7,16 @@ import {
 
 describe('AgentSchema', () => {
   const valid = {
-    id: 'agent-zernio-poster',
-    departmentId: 'dept-marketing',
-    name: 'Zernio Poster',
-    role: 'Social Distribution',
-    status: 'active',
+    id: 'djed',
+    departmentId: 'dept-research',
+    name: 'Djed',
+    role: 'Macro & Geopolitical Desk',
+    status: 'planned',
     tier: 'specialist',
-    description: 'Schedules and publishes content across IG, TikTok, YouTube, FB, LinkedIn, X.',
-    model: 'claude-fable-5',
-    tools: ['zernio', 'whisper'],
-    parentId: null,
+    description: 'Maintains the global macroeconomic and geopolitical view.',
+    model: 'unassigned',
+    tools: ['startup-brain', 'web-research', 'macro-data', 'market-data', 'news'],
+    parentId: 'beppe',
     instance: 'builtin',
   };
 
@@ -71,9 +71,9 @@ describe('ToolSchema', () => {
   test('rejects an unknown integration status', () => {
     expect(() =>
       ToolSchema.parse({
-        id: 'tool-zernio',
-        name: 'Zernio',
-        category: 'Distribution',
+        id: 'tool-market-data',
+        name: 'Market Data',
+        category: 'Research',
         status: 'maybe',
         color: '#22d3ee',
         description: '',

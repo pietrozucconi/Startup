@@ -9,10 +9,10 @@ function db() {
 describe('agentTasks repo', () => {
   test('insert + byAgent round-trips, newest first', () => {
     const d = db();
-    d.agentTasks.insert({ id: 't1', agentId: 'social-agent', title: 'Draft 3 reels', status: 'open', createdAt: '2026-06-12T01:00:00Z', updatedAt: '2026-06-12T01:00:00Z' });
-    d.agentTasks.insert({ id: 't2', agentId: 'social-agent', title: 'Schedule posts', status: 'open', createdAt: '2026-06-12T02:00:00Z', updatedAt: '2026-06-12T02:00:00Z' });
-    d.agentTasks.insert({ id: 't3', agentId: 'crm-pulse', title: 'Other agent', status: 'open', createdAt: '2026-06-12T03:00:00Z', updatedAt: '2026-06-12T03:00:00Z' });
-    const tasks = d.agentTasks.byAgent('social-agent');
+    d.agentTasks.insert({ id: 't1', agentId: 'lauti', title: 'Review equity filing', status: 'open', createdAt: '2026-06-12T01:00:00Z', updatedAt: '2026-06-12T01:00:00Z' });
+    d.agentTasks.insert({ id: 't2', agentId: 'lauti', title: 'Update equity thesis', status: 'open', createdAt: '2026-06-12T02:00:00Z', updatedAt: '2026-06-12T02:00:00Z' });
+    d.agentTasks.insert({ id: 't3', agentId: 'pepo', title: 'Other agent', status: 'open', createdAt: '2026-06-12T03:00:00Z', updatedAt: '2026-06-12T03:00:00Z' });
+    const tasks = d.agentTasks.byAgent('lauti');
     expect(tasks.map((t) => t.id)).toEqual(['t2', 't1']);
   });
 
@@ -37,12 +37,12 @@ describe('agentTasks repo', () => {
 describe('agentCrons repo', () => {
   test('insert + byAgent + toggle round-trips', () => {
     const d = db();
-    d.agentCrons.insert({ id: 'c1', agentId: 'social-agent', schedule: '0 9 * * 1-5', description: 'Morning content pass', enabled: true, createdAt: '2026-06-12T01:00:00Z' });
-    const crons = d.agentCrons.byAgent('social-agent');
+    d.agentCrons.insert({ id: 'c1', agentId: 'marcus', schedule: '0 9 * * 1-5', description: 'Morning market news scan', enabled: true, createdAt: '2026-06-12T01:00:00Z' });
+    const crons = d.agentCrons.byAgent('marcus');
     expect(crons).toHaveLength(1);
     expect(crons[0]).toMatchObject({ schedule: '0 9 * * 1-5', enabled: true });
     d.agentCrons.setEnabled('c1', false);
-    expect(d.agentCrons.byAgent('social-agent')[0].enabled).toBe(false);
+    expect(d.agentCrons.byAgent('marcus')[0].enabled).toBe(false);
   });
 
   test('rejects malformed cron schedules at the boundary', () => {

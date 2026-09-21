@@ -18,7 +18,7 @@ export default function TasksPage() {
         </p>
 
         <p className="mt-2 text-sm leading-relaxed text-os-dim">
-          No legacy FounderOS tasks are loaded.
+          No company tasks have been created yet.
         </p>
       </div>
 

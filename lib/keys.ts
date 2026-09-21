@@ -22,11 +22,7 @@ export const KEY_SLOTS: KeySlot[] = [
   { envVar: 'INBOX_4_USER', label: 'Inbox 4 user', group: 'Email' },
   { envVar: 'INBOX_4_PASS', label: 'Inbox 4 app password', group: 'Email' },
   { envVar: 'SLACK_BOT_TOKEN', label: 'Slack bot token', group: 'Slack', hint: 'xoxb-… needs chat:write to reply from the OS' },
-  { envVar: 'STRIPE_SECRET_KEY', label: 'Stripe secret key', group: 'Payments' },
-  { envVar: 'PAYPAL_CLIENT_ID', label: 'PayPal client id', group: 'Payments' },
-  { envVar: 'PAYPAL_CLIENT_SECRET', label: 'PayPal client secret', group: 'Payments' },
-  { envVar: 'SQUARE_ACCESS_TOKEN', label: 'Square access token', group: 'Payments' },
-  { envVar: 'WHOP_API_KEY', label: 'Whop API key', group: 'Payments' },
+  { envVar: 'AI_GATEWAY_API_KEY', label: 'AI Gateway API key', group: 'LLM' },
   { envVar: 'NOTION_API_KEY', label: 'Notion integration secret', group: 'Notion' },
 ];
 

@@ -62,7 +62,6 @@ try {
   const agents = db.agents.all();
 
   const legacyCounts = {
-    workflows: db.workflows.all().length,
     skills: db.skills.all().length,
     tools: db.tools.all().length,
     agentRuns: db.agentRuns.recent(1_000_000).length,

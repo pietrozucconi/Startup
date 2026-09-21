@@ -45,13 +45,10 @@ export const ToolSchema = z.object({
 export const INTEGRATION_CATEGORIES = [
   'Productivity',
   'Communication',
-  'CRM & Sales',
   'Developer',
   'Scheduling',
   'Finance',
-  'Marketing',
   'Storage',
-  'Knowledge',
   'AI & Automation',
   'Creative',
 ] as const;
@@ -144,40 +141,6 @@ export const AgentCronSchema = z.object({
 
 
 
-
-// ── Workflows — the machine, mapped as a chain of owned process steps ───────
-// Each step is owned by a human or an agent, costs weekly hours, may leak money
-// (a bottleneck), and may carry a live/suggested automation that recovers it.
-export const WorkflowOwnerKindSchema = z.enum(['human', 'agent']);
-export const WorkflowAutomationStateSchema = z.enum(['live', 'suggested']);
-
-export const WorkflowStepSchema = z.object({
-  id: z.string().min(1),
-  title: z.string().min(1),
-  ownerKind: WorkflowOwnerKindSchema,
-  owner: z.string().min(1), // "Alex · Founder" / "SDR Agent"
-  hoursPerWeek: z.number().nonnegative(),
-  tools: z.array(z.string()), // tool slugs (same namespace as agents)
-  edgeLabel: z.string().nullable(), // label on the edge INTO the next step
-  leakUsd: z.number().nonnegative().nullable(), // $/mo bleeding here when it's a bottleneck
-  automation: z
-    .object({
-      title: z.string().min(1),
-      state: WorkflowAutomationStateSchema,
-      recoveredUsd: z.number().nonnegative(), // $/mo the automation carries
-    })
-    .nullable(),
-});
-
-export const WorkflowSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1), // "Vantage sales machine"
-  subtitle: z.string(),
-  revenueUsd: z.number().nonnegative(), // $/mo this machine drives (context for leaks)
-  order: z.number().int(),
-  steps: z.array(WorkflowStepSchema),
-});
-
 // ── Skills — the agent workforce's capability library ───────────────────────
 export const SkillStatusSchema = z.enum(['live', 'learning', 'planned']);
 export const SkillSchema = z.object({
@@ -192,17 +155,7 @@ export const SkillSchema = z.object({
   order: z.number().int(),
 });
 
-// ── Client roster — one row per client, whatever the source ─────────────────
-// The Clients pillar serves Attio deals when the connector is live and the
-// seeded funnel otherwise; `source` keeps the card honest about which.
-export const RosterClientSchema = z.object({
-  id: z.string().min(1),
-  name: z.string().min(1),
-  venture: z.string(),
-  status: z.string().min(1),
-  amountUsd: z.number().nullable(),
-  source: z.enum(['attio', 'funnel']),
-});
+
 
 
 
@@ -220,10 +173,5 @@ export type AgentMessageRole = z.infer<typeof AgentMessageRoleSchema>;
 export type ActivityEvent = z.infer<typeof ActivityEventSchema>;
 export type AgentTask = z.infer<typeof AgentTaskSchema>;
 export type AgentCron = z.infer<typeof AgentCronSchema>;
-export type RosterClient = z.infer<typeof RosterClientSchema>;
-export type WorkflowOwnerKind = z.infer<typeof WorkflowOwnerKindSchema>;
-export type WorkflowAutomationState = z.infer<typeof WorkflowAutomationStateSchema>;
-export type WorkflowStep = z.infer<typeof WorkflowStepSchema>;
-export type Workflow = z.infer<typeof WorkflowSchema>;
 export type SkillStatus = z.infer<typeof SkillStatusSchema>;
 export type Skill = z.infer<typeof SkillSchema>;

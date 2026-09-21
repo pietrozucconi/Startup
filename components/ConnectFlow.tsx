@@ -5,7 +5,7 @@
  * form (one field per env key), Save posts to /api/connections/connect (which
  * writes .env.local only), and the page refreshes into the connector's real
  * status — connected is never faked, a stored key on a connector-less tile
- * reads "key saved". Guidance-only tools (WhatsApp needs Full Disk Access,
+ * reads "key saved". Guidance-only tools
  * IMAP inboxes, CalDAV) show their setup hint instead of a form.
  */
 import { useState } from 'react';

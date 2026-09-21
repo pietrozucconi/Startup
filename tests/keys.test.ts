@@ -16,7 +16,7 @@ describe('KEY_SLOTS', () => {
   test('covers the canonical connector slots with groups', () => {
     const vars = KEY_SLOTS.map((s) => s.envVar);
     expect(vars).toEqual(
-      expect.arrayContaining(['SLACK_BOT_TOKEN', 'STRIPE_SECRET_KEY', 'NOTION_API_KEY', 'INBOX_1_PASS']),
+      expect.arrayContaining(['SLACK_BOT_TOKEN', 'AI_GATEWAY_API_KEY', 'NOTION_API_KEY', 'INBOX_1_PASS']),
     );
     for (const slot of KEY_SLOTS) {
       expect(slot.group.length).toBeGreaterThan(0);
@@ -27,13 +27,13 @@ describe('KEY_SLOTS', () => {
 
 describe('listKeyStatuses', () => {
   test('reports presence with masked values only — never the raw secret', () => {
-    const env = { SLACK_BOT_TOKEN: 'xoxb-very-secret-9876', STRIPE_SECRET_KEY: '' };
+    const env = { SLACK_BOT_TOKEN: 'xoxb-very-secret-9876', AI_GATEWAY_API_KEY: '' };
     const statuses = listKeyStatuses(env);
     const slack = statuses.find((s) => s.envVar === 'SLACK_BOT_TOKEN')!;
     expect(slack.present).toBe(true);
     expect(slack.masked).toBe('••••9876');
     expect(JSON.stringify(statuses)).not.toContain('xoxb-very-secret-9876');
-    expect(statuses.find((s) => s.envVar === 'STRIPE_SECRET_KEY')!.present).toBe(false);
+    expect(statuses.find((s) => s.envVar === 'AI_GATEWAY_API_KEY')!.present).toBe(false);
   });
 });
 
@@ -53,8 +53,8 @@ describe('upsertEnvLocal', () => {
 
   test('creates the file when missing and rejects bad names', () => {
     const file = path.join(mkdtempSync(path.join(tmpdir(), 'keys-')), '.env.local');
-    upsertEnvLocal(file, 'STRIPE_SECRET_KEY', 'sk_test_1');
-    expect(readFileSync(file, 'utf8')).toContain('STRIPE_SECRET_KEY=sk_test_1');
+    upsertEnvLocal(file, 'AI_GATEWAY_API_KEY', 'gateway_test_1');
+    expect(readFileSync(file, 'utf8')).toContain('AI_GATEWAY_API_KEY=gateway_test_1');
     expect(() => upsertEnvLocal(file, 'bad-name', 'x')).toThrow();
     expect(() => upsertEnvLocal(file, 'HAS SPACE', 'x')).toThrow();
   });

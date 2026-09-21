@@ -9,7 +9,7 @@ export type MetricInput = {
   id: string;
   label: string;
   unit: string;
-  source: string; // small bottom-right caption — 'Zernio', 'Attio', 'pending creds', …
+  source: string; // small bottom-right caption identifying the metric source
   value: number | null; // null/<=0 ⇒ pending
   delta?: number; // movement; omit/0 ⇒ flat (no arrow)
   deltaPct?: boolean; // render the delta as a percentage?

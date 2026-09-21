@@ -5,13 +5,7 @@ export type ConnectorKind =
   | 'calendar'
   | 'slack'
   | 'notion'
-  | 'brain'
-  | 'social'
-  | 'crm'
-  | 'ads'
   | 'creative'
-  | 'knowledge'
-  | 'local'
   | 'orchestration';
 
 export type ConnectorStatus = {

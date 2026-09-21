@@ -74,7 +74,7 @@ export default function BrainPage() {
           </div>
 
           <p className="mt-2 text-sm leading-relaxed text-os-muted">
-            No legacy FounderOS memory is loaded.
+            No institutional memory is currently loaded.
           </p>
 
           <p className="mt-1 text-sm leading-relaxed text-os-dim">

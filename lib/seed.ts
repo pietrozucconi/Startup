@@ -7,7 +7,7 @@ import type { Agent, Department } from '@/lib/schemas';
  * This file contains only authoritative structural data belonging to this
  * company.
  *
- * It must never contain demo data, legacy FounderOS business data, personal
+ * It must never contain demo data, legacy application business data, personal
  * data from previous operators, simulated company history or fabricated
  * operational activity.
  *
@@ -520,7 +520,6 @@ export function seedDatabase(db: FounderDb): void {
   // No replacement demo data is inserted.
   // ----------------------------------------------------------------------
 
-  db.workflows.deleteWhereIdNotIn([]);
   db.skills.deleteWhereIdNotIn([]);
 
   // ----------------------------------------------------------------------

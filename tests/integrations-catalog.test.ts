@@ -63,7 +63,6 @@ describe('connectionCatalog — merges live connector state onto the catalog', (
   test('a not_configured or error connector is not connected', () => {
     const rows = connectionCatalog(statuses);
     expect(rows.find((r) => r.slug === 'notion')?.connected).toBe(false);
-    expect(rows.find((r) => r.slug === 'stripe')?.connected).toBe(false);
   });
 
   test('an integration with no connectorId is never connected', () => {
@@ -83,25 +82,17 @@ describe('connect flow (paste a key on the board)', () => {
     expect(connectKeysFor(notion)).toEqual(['NOTION_API_KEY']);
     const discord = INTEGRATIONS.find((i) => i.slug === 'discord')!;
     expect(connectKeysFor(discord)).toEqual(['DISCORD_API_KEY']);
-    const whatsapp = INTEGRATIONS.find((i) => i.slug === 'whatsapp')!;
-    expect(connectKeysFor(whatsapp)).toEqual([]);
+    const gmail = INTEGRATIONS.find((i) => i.slug === 'gmail')!;
+    expect(connectKeysFor(gmail)).toEqual([]);
   });
 
-  test("Alex's real stack is listed and tied to its connectors", () => {
-    const bySlug = new Map(INTEGRATIONS.map((i) => [i.slug, i]));
-    expect(bySlug.get('gohighlevel')?.connectorId).toBe('ghl');
-    expect(bySlug.get('webinarjam')?.connectorId).toBe('webinarjam');
-    expect(bySlug.get('trakyo')?.connectorId).toBe('trakyo');
-    expect(bySlug.get('arcads')?.connectorId).toBe('arcads');
-  });
-
+  
   test('keySaved reflects env.local coverage of the entry keys, never fakes connected', () => {
-    const catalog = connectionCatalog([], { NOTION_API_KEY: 'x', PAYPAL_CLIENT_ID: 'a' });
+    const catalog = connectionCatalog([], { NOTION_API_KEY: 'x', DISCORD_API_KEY: 'd' });
     const bySlug = new Map(catalog.map((c) => [c.slug, c]));
     expect(bySlug.get('notion')?.keySaved).toBe(true);
     expect(bySlug.get('notion')?.connected).toBe(false);
     // multi-key entries need every key before keySaved
-    expect(bySlug.get('paypal')?.keySaved).toBe(false);
-    expect(bySlug.get('discord')?.keySaved).toBe(false);
+    expect(bySlug.get('discord')?.keySaved).toBe(true);
   });
 });

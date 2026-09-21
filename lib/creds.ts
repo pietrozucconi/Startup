@@ -1,13 +1,12 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 
 /**
- * Credential resolution for connectors. Alex's keys already live in
- * canonical locations around the machine (~/.config/social/.env,
- * knowledge/.env.agents, ~/.config/mcp.json, project .env files). Connectors
- * resolve from process.env first, then fall back to those files at runtime —
- * no secrets are ever copied into this repo.
+ * Credential resolution for connectors.
+ *
+ * Secrets are read from the project's live .env.local store or from
+ * process.env. Optional explicit credential files may be supplied by a caller,
+ * but no user-specific machine paths are hard-coded in the application.
  */
 
 export function parseEnvFile(content: string): Record<string, string> {
@@ -31,21 +30,6 @@ export function parseEnvFile(content: string): Record<string, string> {
   }
   return out;
 }
-
-export function extractMcpEnvKey(claudeJson: unknown, server: string, key: string): string | undefined {
-  const servers = (claudeJson as { mcpServers?: Record<string, { env?: Record<string, string> }> })
-    ?.mcpServers;
-  return servers?.[server]?.env?.[key];
-}
-
-const HOME = os.homedir();
-
-export const CRED_FILES = {
-  socialMedia: path.join(HOME, '.config/social', '.env'),
-  agentsEnv: path.join(HOME, 'knowledge', '.env.agents'),
-  arcads: path.join(HOME, 'Projects', 'arcads-agent-skills', '.env'),
-  claudeJson: path.join(HOME, '.config/mcp.json'),
-};
 
 function readEnvFileSafe(filePath: string): Record<string, string> {
   try {
@@ -118,7 +102,7 @@ export function runtimeEnv(): Record<string, string | undefined> {
 }
 
 /** Fresh .env.local first, then process.env, then each env file in order. */
-export function resolveCred(name: string, files: string[]): string | undefined {
+export function resolveCred(name: string, files: string[] = []): string | undefined {
   const fromLocal = readEnvLocal()[name];
   if (fromLocal) return fromLocal;
   const fromEnv = process.env[name];
@@ -130,15 +114,6 @@ export function resolveCred(name: string, files: string[]): string | undefined {
   return undefined;
 }
 
-export function resolveAttioKey(): string | undefined {
-  if (process.env.ATTIO_API_KEY) return process.env.ATTIO_API_KEY;
-  try {
-    const claudeJson = JSON.parse(fs.readFileSync(CRED_FILES.claudeJson, 'utf8'));
-    return extractMcpEnvKey(claudeJson, 'attio', 'ATTIO_API_KEY');
-  } catch {
-    return undefined;
-  }
-}
 
 
 

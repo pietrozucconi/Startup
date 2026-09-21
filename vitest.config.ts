@@ -17,7 +17,7 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     environment: 'node',
     // Hermetic creds: .env.local is a live credential store read fresh at call
-    // time (lib/creds.ts), so tests must never see Alex's real file. Tests
+    // time (lib/creds.ts), so tests must never see the user's real credential file. Tests
     // that exercise the store point this at their own tmp path.
     env: {
       STARTUP_ENV_LOCAL: path.resolve(__dirname, 'tests', '.env.local.does-not-exist'),

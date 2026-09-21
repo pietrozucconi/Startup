@@ -18,7 +18,6 @@ describe('seedDatabase', () => {
     expect(db.agents.all()).toHaveLength(19);
 
     expect(db.tools.all()).toHaveLength(0);
-    expect(db.workflows.all()).toHaveLength(0);
     expect(db.skills.all()).toHaveLength(0);
     expect(db.agentTasks.all()).toHaveLength(0);
   });

@@ -6,13 +6,13 @@ import { POST, DELETE } from '@/app/api/connections/connect/route';
 import { readEnvLocal } from '@/lib/creds';
 
 /** The connect flow writes ONLY to .env.local (gitignored) — never to
- *  Alex's canonical machine files, never into the repo. */
+ *  the configured project credential store, never into the repo. */
 describe('POST /api/connections/connect', () => {
   let tmp: string;
   const prevOverride = process.env.STARTUP_ENV_LOCAL;
 
   beforeEach(() => {
-    tmp = path.join(os.tmpdir(), `alex-connect-${process.pid}-${Math.random().toString(36).slice(2)}`);
+    tmp = path.join(os.tmpdir(), `startup-connect-${process.pid}-${Math.random().toString(36).slice(2)}`);
     process.env.STARTUP_ENV_LOCAL = tmp;
   });
   afterEach(() => {
@@ -43,12 +43,12 @@ describe('POST /api/connections/connect', () => {
   test('rejects unknown slugs, foreign keys, and unsafe values', async () => {
     expect((await post({ slug: 'not-a-tool', values: { X_API_KEY: 'v' } })).status).toBe(400);
     // a key that does not belong to this integration must never be written
-    expect((await post({ slug: 'notion', values: { ATTIO_API_KEY: 'steal' } })).status).toBe(400);
-    expect(readEnvLocal().ATTIO_API_KEY).toBeUndefined();
+    expect((await post({ slug: 'notion', values: { SLACK_BOT_TOKEN: 'steal' } })).status).toBe(400);
+    expect(readEnvLocal().SLACK_BOT_TOKEN).toBeUndefined();
     expect((await post({ slug: 'notion', values: { NOTION_API_KEY: 'a\nb' } })).status).toBe(400);
     expect((await post({ slug: 'notion', values: {} })).status).toBe(400);
-    // guidance-only tiles (whatsapp needs Full Disk Access, not a key) take no keys
-    expect((await post({ slug: 'whatsapp', values: { WHATSAPP_API_KEY: 'x' } })).status).toBe(400);
+    // guidance-only integrations do not accept arbitrary pasted keys
+    expect((await post({ slug: 'gmail', values: { GMAIL_API_KEY: 'x' } })).status).toBe(400);
   });
 
   test('DELETE removes exactly the integration keys (disconnect)', async () => {

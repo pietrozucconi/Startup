@@ -8,10 +8,10 @@ function db() {
 describe('agentMessages repo', () => {
   test('insert + byAgent round-trips oldest→newest, scoped to the agent', () => {
     const d = db();
-    d.agentMessages.insert({ id: 'm1', agentId: 'data-agent', role: 'user', content: 'hi', toolCalls: [], createdAt: '2026-06-12T01:00:00Z' });
-    d.agentMessages.insert({ id: 'm2', agentId: 'data-agent', role: 'assistant', content: 'hello', toolCalls: [], createdAt: '2026-06-12T02:00:00Z' });
-    d.agentMessages.insert({ id: 'm3', agentId: 'sales-agent', role: 'user', content: 'other', toolCalls: [], createdAt: '2026-06-12T03:00:00Z' });
-    const msgs = d.agentMessages.byAgent('data-agent');
+    d.agentMessages.insert({ id: 'm1', agentId: 'lauti', role: 'user', content: 'hi', toolCalls: [], createdAt: '2026-06-12T01:00:00Z' });
+    d.agentMessages.insert({ id: 'm2', agentId: 'lauti', role: 'assistant', content: 'hello', toolCalls: [], createdAt: '2026-06-12T02:00:00Z' });
+    d.agentMessages.insert({ id: 'm3', agentId: 'research-agent', role: 'user', content: 'other', toolCalls: [], createdAt: '2026-06-12T03:00:00Z' });
+    const msgs = d.agentMessages.byAgent('lauti');
     expect(msgs.map((m) => m.id)).toEqual(['m1', 'm2']);
     expect(msgs[1].role).toBe('assistant');
   });
@@ -20,14 +20,14 @@ describe('agentMessages repo', () => {
     const d = db();
     d.agentMessages.insert({
       id: 'm1',
-      agentId: 'data-agent',
+      agentId: 'lauti',
       role: 'tool',
-      content: 'searched the brain',
-      toolCalls: [{ name: 'searchGBrain', args: { q: 'revenue' }, result: { hits: 2 } }],
+      content: 'searched Startup Brain',
+      toolCalls: [{ name: 'searchStartupBrain', args: { q: 'prior thesis' }, result: { hits: 2 } }],
       createdAt: '2026-06-12T01:00:00Z',
     });
-    const [m] = d.agentMessages.byAgent('data-agent');
-    expect(m.toolCalls).toEqual([{ name: 'searchGBrain', args: { q: 'revenue' }, result: { hits: 2 } }]);
+    const [m] = d.agentMessages.byAgent('lauti');
+    expect(m.toolCalls).toEqual([{ name: 'searchStartupBrain', args: { q: 'prior thesis' }, result: { hits: 2 } }]);
   });
 
   test('recent(limit) returns newest-first across agents', () => {

@@ -29,7 +29,6 @@ describe('application shell', () => {
     const palette = read('components/CommandPalette.tsx');
 
     expect(palette).toContain("'startup:palette'");
-    expect(palette).not.toContain("'alex:palette'");
   });
 
   test('sidebar retains the reusable OS mark', () => {

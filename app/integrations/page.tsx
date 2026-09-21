@@ -18,7 +18,7 @@ export default function ConnectionsPage() {
         </p>
 
         <p className="mt-2 text-sm leading-relaxed text-os-dim">
-          No legacy FounderOS integrations are considered part of the company.
+          Only integrations explicitly configured for this company are considered active.
         </p>
       </div>
 

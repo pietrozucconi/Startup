@@ -11,7 +11,7 @@ describe('OS mark branding', () => {
   test('the mark is the ring with an UPRIGHT letter-S seam in brand red', () => {
     const mark = read('components/OsMark.tsx');
     expect(mark).toContain('#ef4444');
-    // vertical S (Alex: "vertical like the O") — stacked arcs, no rotation
+    // vertical S aligned with the O — stacked arcs, no rotation
     expect(mark).toContain('d="M 50 22.53 A 13.74 13.74 0 0 0 50 50 A 13.74 13.74 0 0 1 50 77.47"');
     expect(mark).not.toContain('rotate(');
     expect(mark).toMatch(/circle cx=\{50\} cy=\{50\} r=\{30\.8\}/);

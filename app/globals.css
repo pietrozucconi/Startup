@@ -38,19 +38,6 @@
   --brain-1: #8b7cff;
   --brain-2: #5ec9f8;
   --brain-3: #4ade96;
-  /* Funnel space — neutral blues by relationship temperature (green/red come
-     from the semantic ok/err tokens). */
-  --funnel-hot: #5ec9f8;
-  --funnel-warm: #3f7fd9;
-  --funnel-cold: #2e527e;
-  --funnel-s0: #5ec9f8;
-  --funnel-s1: #8b7cff;
-  --funnel-s2: #e3d872;
-  --funnel-s3: #2dd4bf;
-  --funnel-s4: #3df08c;
-  /* Two more hues so the radial view's 7 acquisition wedges each get one. */
-  --funnel-s5: #f096c8;
-  --funnel-s6: #f0a05a;
   /* tool nodes on the knowledge graph (radial + directory + legend);
      follows brain-2 everywhere except themes that override it */
   --kg-tool: var(--brain-2);
@@ -84,16 +71,6 @@
   --brain-1: #7a5cf0;
   --brain-2: #2b8fd8;
   --brain-3: #c96442;
-  --funnel-hot: #1d8fd6;
-  --funnel-warm: #2f5fa8;
-  --funnel-cold: #6b83a3;
-  --funnel-s0: #1d8fd6;
-  --funnel-s1: #7a5cf0;
-  --funnel-s2: #a98f1c;
-  --funnel-s3: #0f9c8a;
-  --funnel-s4: #0b8a52;
-  --funnel-s5: #c04a8a;
-  --funnel-s6: #b5651d;
   /* kg tool nodes follow the theme's brain-2 (mono overrides to red). */
   --kg-tool: var(--brain-2);
 }
@@ -125,16 +102,6 @@
   --brain-1: #8b7cff;
   --brain-2: #5ec9f8;
   --brain-3: #4ade96;
-  --funnel-hot: #5ec9f8;
-  --funnel-warm: #3f7fd9;
-  --funnel-cold: #2e527e;
-  --funnel-s0: #5ec9f8;
-  --funnel-s1: #8b7cff;
-  --funnel-s2: #e3d872;
-  --funnel-s3: #2dd4bf;
-  --funnel-s4: #4ade96;
-  --funnel-s5: #f096c8;
-  --funnel-s6: #f0a05a;
   /* kg tool nodes follow the theme's brain-2 (mono overrides to red). */
   --kg-tool: var(--brain-2);
 }
@@ -165,16 +132,6 @@
   --brain-1: #e35c35;
   --brain-2: #f0a05a;
   --brain-3: #d98d62;
-  --funnel-hot: #e35c35;
-  --funnel-warm: #b25538;
-  --funnel-cold: #6e4636;
-  --funnel-s0: #e35c35;
-  --funnel-s1: #f0a05a;
-  --funnel-s2: #e3d872;
-  --funnel-s3: #2dd4bf;
-  --funnel-s4: #4ade96;
-  --funnel-s5: #f096c8;
-  --funnel-s6: #b5651d;
   /* kg tool nodes follow the theme's brain-2 (mono overrides to red). */
   --kg-tool: var(--brain-2);
 }
@@ -214,19 +171,7 @@
   --brain-1: #f2f2f2;
   --brain-2: #9c9c9c;
   --brain-3: #5c5c5c;
-  /* Funnel temperature = status semantics; segments = grey ramp,
-     conversion (s4) is the one green. */
-  --funnel-hot: var(--ok);
-  --funnel-warm: var(--warn);
-  --funnel-cold: #5c5c5c;
-  --funnel-s0: #f2f2f2;
-  --funnel-s1: #bdbdbd;
-  --funnel-s2: #8a8a8a;
-  --funnel-s3: #6e6e6e;
-  --funnel-s4: var(--ok);
-  --funnel-s5: #575757;
-  --funnel-s6: #474747;
-  /* Alex's call (2026-07-10): tools burn red on the monolith radial. */
+  /* Tool nodes use the error/status accent in the Monolith theme. */
   --kg-tool: #ff2d3f;
 }
 
@@ -263,28 +208,18 @@
   --brain-1: #6d5cf0;
   --brain-2: #1f84c6;
   --brain-3: #2dbdaf;
-  --funnel-hot: #d92d20;
-  --funnel-warm: #b7791f;
-  --funnel-cold: #6b83a3;
-  --funnel-s0: #1f84c6;
-  --funnel-s1: #6d5cf0;
-  --funnel-s2: #b7791f;
-  --funnel-s3: #0f9c8a;
-  --funnel-s4: #17924e;
-  --funnel-s5: #c04a8a;
-  --funnel-s6: #7a828c;
   --kg-tool: #4cc4d0;
   --kg-person: #2f5fd0;
   --kg-employee: #16222c;
   --kg-mem: #2fa8bc;
   --kg-synapse: #7fd2df;
-  --kg-c-ef4444: #14b3b3; /* Sales red → cyan */
-  --kg-c-3b82f6: #c08b1e; /* Communications blue → amber */
-  --kg-c-22c55e: #cf3f9a; /* Finances green → magenta */
-  --kg-c-a855f7: #79ab19; /* TECH purple → lime */
-  --kg-c-14b8a6: #d9445c; /* Clients teal → crimson */
-  --kg-c-f59e0b: #2f6fe0; /* Marketing amber → royal blue */
-  --kg-c-fafafa: #16222c; /* knowledge white → ink */
+  --kg-c-ef4444: #14b3b3;
+  --kg-c-3b82f6: #c08b1e;
+  --kg-c-22c55e: #cf3f9a;
+  --kg-c-a855f7: #79ab19;
+  --kg-c-14b8a6: #d9445c;
+  --kg-c-f59e0b: #2f6fe0;
+  --kg-c-fafafa: #16222c;
 }
 
 /* Row-divider hairlines for every theme (mono sets its own above, and the
@@ -442,7 +377,7 @@ body {
   }
 }
 
-/* Pop-out overlays (G-Brain doctor/search): the scrim fades in and the
+/* Pop-out overlays (knowledge search): the scrim fades in and the
    panel glides up into place — opening must never read as a blank snap. */
 .overlay-in {
   animation: overlay-in 0.22s ease-out both;
@@ -490,7 +425,7 @@ body {
 
 
 
-/* ---------------- G-Brain viz ---------------- */
+/* ---------------- knowledge graph viz ---------------- */
 .brain-stage {
   background:
     radial-gradient(circle at 50% 45%, color-mix(in oklab, var(--brain-1) 10%, transparent), transparent 65%),
@@ -540,7 +475,7 @@ body {
 
 
 
-/* G-Brain graph motion: flowing synapses on the edges, orbiting live agents,
+/* Knowledge graph motion: flowing synapses on the edges, orbiting live agents,
    breathing task nodes, and the synthesizing shimmer. */
 @keyframes kg-synapse-flow {
   from {
