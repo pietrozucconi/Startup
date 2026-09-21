@@ -13,3 +13,8 @@ export * from '@/lib/control-plane/sqlite-store';
 export * from '@/lib/control-plane/atomic-store';
 export * from '@/lib/control-plane/sqlite-atomic-store';
 export * from '@/lib/control-plane/atomic-engine';
+export * from '@/lib/control-plane/consumer-schema';
+export * from '@/lib/control-plane/consumer';
+export * from '@/lib/control-plane/reliable-store';
+export * from '@/lib/control-plane/sqlite-reliable-store';
+export * from '@/lib/control-plane/outbox-worker';
