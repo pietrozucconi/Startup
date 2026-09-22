@@ -33,3 +33,5 @@ export * from '@/lib/control-plane/default-brain-memory-composer';
 export * from '@/lib/control-plane/runtime-bootstrap';
 export * from '@/lib/control-plane/runtime-data';
 export * from '@/lib/control-plane/operator-view';
+export * from '@/lib/control-plane/agent-executor';
+export * from '@/lib/control-plane/ceo-decision-service';
