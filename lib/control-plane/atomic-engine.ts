@@ -18,6 +18,10 @@ import type {
 } from '@/lib/control-plane/atomic-store';
 
 import {
+  fingerprintControlPlaneRequest,
+} from '@/lib/control-plane/request-fingerprint';
+
+import {
   canAuthorizeFinancialAction,
   canCreateInvestmentWorkflow,
   canRecordMaterialInvalidation,
@@ -150,6 +154,26 @@ export class AtomicCompanyControlPlane {
     }
   }
 
+  private async reserveRequestIntegrity(
+    request: {
+      requestId: string;
+      [key: string]: unknown;
+    },
+  ): Promise<void> {
+    const fingerprint =
+      fingerprintControlPlaneRequest(
+        request,
+      );
+
+    await this.store.reserveRequestFingerprint({
+      requestId:
+        request.requestId,
+      fingerprint,
+      observedAt:
+        this.clock(),
+    });
+  }
+
   private async duplicateWorkflowResult(
     requestId: string,
     workflowId: string,
@@ -263,6 +287,10 @@ export class AtomicCompanyControlPlane {
   ) {
     const request =
       CreateWorkflowRequestSchema.parse(input);
+
+    await this.reserveRequestIntegrity(
+      request,
+    );
 
     const duplicate =
       await this.duplicateWorkflowResult(
@@ -385,6 +413,10 @@ export class AtomicCompanyControlPlane {
       RegisterArtifactRequestSchema.parse(
         input,
       );
+
+    await this.reserveRequestIntegrity(
+      request,
+    );
 
     const duplicate =
       await this.duplicateWorkflowResult(
@@ -544,6 +576,10 @@ export class AtomicCompanyControlPlane {
     const request =
       TransitionRequestSchema.parse(input);
 
+    await this.reserveRequestIntegrity(
+      request,
+    );
+
     const duplicate =
       await this.duplicateWorkflowResult(
         request.requestId,
@@ -699,6 +735,10 @@ export class AtomicCompanyControlPlane {
       RecordInvalidationRequestSchema.parse(
         input,
       );
+
+    await this.reserveRequestIntegrity(
+      request,
+    );
 
     const duplicate =
       await this.duplicateWorkflowResult(
@@ -857,6 +897,10 @@ export class AtomicCompanyControlPlane {
         input,
       );
 
+    await this.reserveRequestIntegrity(
+      request,
+    );
+
     const duplicate =
       await this.duplicateWorkflowResult(
         request.requestId,
@@ -1007,6 +1051,10 @@ export class AtomicCompanyControlPlane {
       FinancialActionRequestSchema.parse(
         input,
       );
+
+    await this.reserveRequestIntegrity(
+      request,
+    );
 
     const existing =
       await this.store.getCommandByRequestId(

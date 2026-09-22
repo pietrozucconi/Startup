@@ -41,3 +41,4 @@ export * from '@/lib/control-plane/brain-context-provider';
 export * from '@/lib/control-plane/agent-model-adapter';
 export * from '@/lib/control-plane/bounded-agent-executor';
 export * from '@/lib/control-plane/agent-runtime-worker';
+export * from '@/lib/control-plane/request-fingerprint';

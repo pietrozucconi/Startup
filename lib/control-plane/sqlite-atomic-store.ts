@@ -1,8 +1,10 @@
 import {
   AtomicControlPlaneCommitSchema,
+  RequestIntegrityRecordSchema,
   type AtomicControlPlaneCommitInput,
   type AtomicControlPlaneCommitResult,
   type AtomicControlPlaneStore,
+  type RequestIntegrityRecord,
 } from '@/lib/control-plane/atomic-store';
 
 import {
@@ -18,6 +20,20 @@ import {
 import {
   SqliteControlPlaneStore,
 } from '@/lib/control-plane/sqlite-store';
+
+const REQUEST_INTEGRITY_DDL = `
+CREATE TABLE IF NOT EXISTS cp_request_integrity (
+  request_id TEXT PRIMARY KEY,
+  fingerprint TEXT NOT NULL,
+  status TEXT NOT NULL,
+  first_seen_at TEXT NOT NULL,
+  last_seen_at TEXT NOT NULL,
+  committed_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS cp_request_integrity_status_idx
+ON cp_request_integrity(status, last_seen_at);
+`;
 
 type CommandRow = {
   command_id: string;
@@ -35,6 +51,15 @@ type WorkflowRow = {
   snapshot_json: string;
 };
 
+type RequestIntegrityRow = {
+  request_id: string;
+  fingerprint: string;
+  status: string;
+  first_seen_at: string;
+  last_seen_at: string;
+  committed_at: string | null;
+};
+
 function parseJson<T>(
   value: string,
 ): T {
@@ -45,15 +70,47 @@ function rowToCommand(
   row: CommandRow,
 ): ControlPlaneCommandRecord {
   return ControlPlaneCommandRecordSchema.parse({
-    commandId: row.command_id,
-    requestId: row.request_id,
-    workflowId: row.workflow_id ?? undefined,
-    commandType: row.command_type,
-    actor: parseJson(row.actor_json),
-    receivedAt: row.received_at,
-    outcome: row.outcome,
-    reason: row.reason,
-    payload: parseJson(row.payload_json),
+    commandId:
+      row.command_id,
+    requestId:
+      row.request_id,
+    workflowId:
+      row.workflow_id ??
+      undefined,
+    commandType:
+      row.command_type,
+    actor:
+      parseJson(row.actor_json),
+    receivedAt:
+      row.received_at,
+    outcome:
+      row.outcome,
+    reason:
+      row.reason,
+    payload:
+      parseJson(
+        row.payload_json,
+      ),
+  });
+}
+
+function rowToRequestIntegrity(
+  row: RequestIntegrityRow,
+): RequestIntegrityRecord {
+  return RequestIntegrityRecordSchema.parse({
+    requestId:
+      row.request_id,
+    fingerprint:
+      row.fingerprint,
+    status:
+      row.status,
+    firstSeenAt:
+      row.first_seen_at,
+    lastSeenAt:
+      row.last_seen_at,
+    committedAt:
+      row.committed_at ??
+      undefined,
   });
 }
 
@@ -61,16 +118,28 @@ export class SqliteAtomicControlPlaneStore
   extends SqliteControlPlaneStore
   implements AtomicControlPlaneStore
 {
+  constructor(dbPath: string) {
+    super(dbPath);
+
+    this.db.exec(
+      REQUEST_INTEGRITY_DDL,
+    );
+  }
+
   async getCommandByRequestId(
     requestId: string,
-  ): Promise<ControlPlaneCommandRecord | null> {
+  ): Promise<
+    ControlPlaneCommandRecord | null
+  > {
     const row = this.db
       .prepare(
         `SELECT *
          FROM cp_commands
          WHERE request_id = ?`,
       )
-      .get(requestId) as
+      .get(
+        requestId,
+      ) as
       | CommandRow
       | undefined;
 
@@ -79,9 +148,172 @@ export class SqliteAtomicControlPlaneStore
       : null;
   }
 
+  async getRequestFingerprint(
+    requestId: string,
+  ): Promise<
+    RequestIntegrityRecord | null
+  > {
+    const row = this.db
+      .prepare(
+        `SELECT *
+         FROM cp_request_integrity
+         WHERE request_id = ?`,
+      )
+      .get(
+        requestId,
+      ) as
+      | RequestIntegrityRow
+      | undefined;
+
+    return row
+      ? rowToRequestIntegrity(
+          row,
+        )
+      : null;
+  }
+
+  async reserveRequestFingerprint(input: {
+    requestId: string;
+    fingerprint: string;
+    observedAt: string;
+  }): Promise<RequestIntegrityRecord> {
+    const parsed =
+      RequestIntegrityRecordSchema.parse({
+        requestId:
+          input.requestId,
+        fingerprint:
+          input.fingerprint,
+        status:
+          'reserved',
+        firstSeenAt:
+          input.observedAt,
+        lastSeenAt:
+          input.observedAt,
+      });
+
+    const transaction =
+      this.db.transaction(() => {
+        const existing =
+          this.db
+            .prepare(
+              `SELECT *
+               FROM cp_request_integrity
+               WHERE request_id = ?`,
+            )
+            .get(
+              parsed.requestId,
+            ) as
+            | RequestIntegrityRow
+            | undefined;
+
+        if (existing) {
+          if (
+            existing.fingerprint !==
+            parsed.fingerprint
+          ) {
+            throw new Error(
+              `request_id_reuse_conflict:${parsed.requestId}`,
+            );
+          }
+
+          this.db
+            .prepare(
+              `UPDATE cp_request_integrity
+               SET last_seen_at = ?
+               WHERE request_id = ?`,
+            )
+            .run(
+              parsed.lastSeenAt,
+              parsed.requestId,
+            );
+
+          const refreshed =
+            this.db
+              .prepare(
+                `SELECT *
+                 FROM cp_request_integrity
+                 WHERE request_id = ?`,
+              )
+              .get(
+                parsed.requestId,
+              ) as RequestIntegrityRow;
+
+          return rowToRequestIntegrity(
+            refreshed,
+          );
+        }
+
+        /*
+         * Fail closed for request IDs that pre-date the integrity layer.
+         * We cannot prove what semantic payload originally owned that ID.
+         */
+        const legacyCommand =
+          this.db
+            .prepare(
+              `SELECT 1 AS found
+               FROM cp_commands
+               WHERE request_id = ?`,
+            )
+            .get(
+              parsed.requestId,
+            ) as
+            | { found: number }
+            | undefined;
+
+        const legacyProcessed =
+          this.db
+            .prepare(
+              `SELECT 1 AS found
+               FROM cp_processed_requests
+               WHERE request_id = ?`,
+            )
+            .get(
+              parsed.requestId,
+            ) as
+            | { found: number }
+            | undefined;
+
+        if (
+          legacyCommand?.found === 1 ||
+          legacyProcessed?.found === 1
+        ) {
+          throw new Error(
+            `request_id_legacy_unverifiable:${parsed.requestId}`,
+          );
+        }
+
+        this.db
+          .prepare(
+            `INSERT INTO cp_request_integrity
+             (
+               request_id,
+               fingerprint,
+               status,
+               first_seen_at,
+               last_seen_at,
+               committed_at
+             )
+             VALUES (?, ?, 'reserved', ?, ?, NULL)`,
+          )
+          .run(
+            parsed.requestId,
+            parsed.fingerprint,
+            parsed.firstSeenAt,
+            parsed.lastSeenAt,
+          );
+
+        return parsed;
+      });
+
+    return transaction();
+  }
+
   async commitAtomic(
-    inputRaw: AtomicControlPlaneCommitInput,
-  ): Promise<AtomicControlPlaneCommitResult> {
+    inputRaw:
+      AtomicControlPlaneCommitInput,
+  ): Promise<
+    AtomicControlPlaneCommitResult
+  > {
     const input =
       AtomicControlPlaneCommitSchema.parse(
         inputRaw,
@@ -89,21 +321,25 @@ export class SqliteAtomicControlPlaneStore
 
     const transaction =
       this.db.transaction(() => {
-        const existingCommand = this.db
-          .prepare(
-            `SELECT *
-             FROM cp_commands
-             WHERE request_id = ?`,
-          )
-          .get(
-            input.command.requestId,
-          ) as
-          | CommandRow
-          | undefined;
+        const existingCommand =
+          this.db
+            .prepare(
+              `SELECT *
+               FROM cp_commands
+               WHERE request_id = ?`,
+            )
+            .get(
+              input.command
+                .requestId,
+            ) as
+            | CommandRow
+            | undefined;
 
         if (existingCommand) {
           const command =
-            rowToCommand(existingCommand);
+            rowToCommand(
+              existingCommand,
+            );
 
           const workflow =
             command.workflowId
@@ -119,23 +355,30 @@ export class SqliteAtomicControlPlaneStore
           };
         }
 
-        const legacyProcessed = this.db
-          .prepare(
-            `SELECT 1 AS found
-             FROM cp_processed_requests
-             WHERE request_id = ?`,
-          )
-          .get(
-            input.command.requestId,
-          ) as
-          | { found: number }
-          | undefined;
+        const legacyProcessed =
+          this.db
+            .prepare(
+              `SELECT 1 AS found
+               FROM cp_processed_requests
+               WHERE request_id = ?`,
+            )
+            .get(
+              input.command
+                .requestId,
+            ) as
+            | { found: number }
+            | undefined;
 
-        if (legacyProcessed?.found === 1) {
+        if (
+          legacyProcessed?.found ===
+          1
+        ) {
           const workflow =
-            input.command.workflowId
+            input.command
+              .workflowId
               ? this.readWorkflowSync(
-                  input.command.workflowId,
+                  input.command
+                    .workflowId,
                 )
               : undefined;
 
@@ -145,33 +388,45 @@ export class SqliteAtomicControlPlaneStore
           };
         }
 
-        this.insertCommand(input.command);
+        this.insertCommand(
+          input.command,
+        );
 
         let workflow:
           | InvestmentWorkflow
           | undefined;
 
-        if (input.mutation.kind === 'create') {
+        if (
+          input.mutation.kind ===
+          'create'
+        ) {
           workflow =
             this.createWorkflowSync(
-              input.mutation.workflow,
+              input.mutation
+                .workflow,
             );
         } else if (
-          input.mutation.kind === 'replace'
+          input.mutation.kind ===
+          'replace'
         ) {
           workflow =
             this.replaceWorkflowSync({
               workflow:
-                input.mutation.workflow,
+                input.mutation
+                  .workflow,
               expectedRevision:
-                input.mutation.expectedRevision,
+                input.mutation
+                  .expectedRevision,
             });
         } else if (
-          input.command.workflowId
+          input.command
+            .workflowId
         ) {
-          workflow = this.readWorkflowSync(
-            input.command.workflowId,
-          );
+          workflow =
+            this.readWorkflowSync(
+              input.command
+                .workflowId,
+            );
         }
 
         this.db
@@ -181,7 +436,8 @@ export class SqliteAtomicControlPlaneStore
              VALUES (?, ?)`,
           )
           .run(
-            input.command.requestId,
+            input.command
+              .requestId,
             input.processedAt,
           );
 
@@ -202,14 +458,20 @@ export class SqliteAtomicControlPlaneStore
           .run(
             input.audit.auditId,
             input.audit.requestId,
-            input.audit.workflowId ?? null,
+            input.audit.workflowId ??
+              null,
             input.audit.at,
             input.audit.action,
             input.audit.outcome,
-            JSON.stringify(input.audit),
+            JSON.stringify(
+              input.audit,
+            ),
           );
 
-        for (const event of input.events) {
+        for (
+          const event of
+          input.events
+        ) {
           this.db
             .prepare(
               `INSERT INTO cp_domain_events
@@ -228,16 +490,25 @@ export class SqliteAtomicControlPlaneStore
             .run(
               event.eventId,
               event.requestId,
-              event.workflowId ?? null,
-              event.sequence ?? null,
+              event.workflowId ??
+                null,
+              event.sequence ??
+                null,
               event.eventType,
-              JSON.stringify(event.actor),
+              JSON.stringify(
+                event.actor,
+              ),
               event.occurredAt,
-              JSON.stringify(event.payload),
+              JSON.stringify(
+                event.payload,
+              ),
             );
         }
 
-        for (const message of input.outbox) {
+        for (
+          const message of
+          input.outbox
+        ) {
           this.db
             .prepare(
               `INSERT INTO cp_outbox
@@ -263,7 +534,8 @@ export class SqliteAtomicControlPlaneStore
               message.messageId,
               message.topic,
               message.partitionKey,
-              message.workflowId ?? null,
+              message.workflowId ??
+                null,
               message.status,
               message.attempts,
               message.createdAt,
@@ -271,18 +543,46 @@ export class SqliteAtomicControlPlaneStore
               JSON.stringify(
                 message.retryPolicy,
               ),
-              message.leaseOwner ?? null,
-              message.leaseUntil ?? null,
-              message.lastError ?? null,
-              message.publishedAt ?? null,
-              JSON.stringify(message.payload),
+              message.leaseOwner ??
+                null,
+              message.leaseUntil ??
+                null,
+              message.lastError ??
+                null,
+              message.publishedAt ??
+                null,
+              JSON.stringify(
+                message.payload,
+              ),
             );
         }
+
+        /*
+         * If this command was reserved by the V2I integrity layer, commit
+         * that reservation inside the SAME SQLite transaction as the
+         * authoritative business mutation, event and outbox write.
+         */
+        this.db
+          .prepare(
+            `UPDATE cp_request_integrity
+             SET status = 'committed',
+                 last_seen_at = ?,
+                 committed_at = ?
+             WHERE request_id = ?
+               AND status = 'reserved'`,
+          )
+          .run(
+            input.processedAt,
+            input.processedAt,
+            input.command
+              .requestId,
+          );
 
         return {
           duplicate: false,
           workflow,
-          command: input.command,
+          command:
+            input.command,
         };
       });
 
@@ -298,19 +598,24 @@ export class SqliteAtomicControlPlaneStore
          FROM cp_workflows
          WHERE id = ?`,
       )
-      .get(workflowId) as
+      .get(
+        workflowId,
+      ) as
       | WorkflowRow
       | undefined;
 
     return row
       ? InvestmentWorkflowSchema.parse(
-          parseJson(row.snapshot_json),
+          parseJson(
+            row.snapshot_json,
+          ),
         )
       : undefined;
   }
 
   private createWorkflowSync(
-    workflowInput: InvestmentWorkflow,
+    workflowInput:
+      InvestmentWorkflow,
   ): InvestmentWorkflow {
     const workflow =
       InvestmentWorkflowSchema.parse(
@@ -335,7 +640,9 @@ export class SqliteAtomicControlPlaneStore
           workflow.id,
           workflow.revision,
           workflow.state,
-          JSON.stringify(workflow),
+          JSON.stringify(
+            workflow,
+          ),
           workflow.createdAt,
           workflow.updatedAt,
         );
@@ -358,7 +665,8 @@ export class SqliteAtomicControlPlaneStore
   }
 
   private replaceWorkflowSync(input: {
-    workflow: InvestmentWorkflow;
+    workflow:
+      InvestmentWorkflow;
     expectedRevision: number;
   }): InvestmentWorkflow {
     const workflow =
@@ -366,38 +674,48 @@ export class SqliteAtomicControlPlaneStore
         input.workflow,
       );
 
-    const result = this.db
-      .prepare(
-        `UPDATE cp_workflows
-         SET revision = ?,
-             state = ?,
-             snapshot_json = ?,
-             updated_at = ?
-         WHERE id = ?
-           AND revision = ?`,
-      )
-      .run(
-        workflow.revision,
-        workflow.state,
-        JSON.stringify(workflow),
-        workflow.updatedAt,
-        workflow.id,
-        input.expectedRevision,
-      );
+    const result =
+      this.db
+        .prepare(
+          `UPDATE cp_workflows
+           SET revision = ?,
+               state = ?,
+               snapshot_json = ?,
+               updated_at = ?
+           WHERE id = ?
+             AND revision = ?`,
+        )
+        .run(
+          workflow.revision,
+          workflow.state,
+          JSON.stringify(
+            workflow,
+          ),
+          workflow.updatedAt,
+          workflow.id,
+          input.expectedRevision,
+        );
 
-    if (result.changes === 1) {
+    if (
+      result.changes === 1
+    ) {
       return workflow;
     }
 
-    const current = this.db
-      .prepare(
-        `SELECT revision
-         FROM cp_workflows
-         WHERE id = ?`,
-      )
-      .get(workflow.id) as
-      | { revision: number }
-      | undefined;
+    const current =
+      this.db
+        .prepare(
+          `SELECT revision
+           FROM cp_workflows
+           WHERE id = ?`,
+        )
+        .get(
+          workflow.id,
+        ) as
+        | {
+            revision: number;
+          }
+        | undefined;
 
     if (!current) {
       throw new Error(
@@ -411,7 +729,8 @@ export class SqliteAtomicControlPlaneStore
   }
 
   private insertCommand(
-    command: ControlPlaneCommandRecord,
+    command:
+      ControlPlaneCommandRecord,
   ): void {
     this.db
       .prepare(
@@ -432,13 +751,18 @@ export class SqliteAtomicControlPlaneStore
       .run(
         command.commandId,
         command.requestId,
-        command.workflowId ?? null,
+        command.workflowId ??
+          null,
         command.commandType,
-        JSON.stringify(command.actor),
+        JSON.stringify(
+          command.actor,
+        ),
         command.receivedAt,
         command.outcome,
         command.reason,
-        JSON.stringify(command.payload),
+        JSON.stringify(
+          command.payload,
+        ),
       );
   }
 }
