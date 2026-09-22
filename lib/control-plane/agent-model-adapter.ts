@@ -25,8 +25,18 @@ import type {
 export const AgentModelUsageSchema = z.object({
   inputTokens:
     z.number().int().min(0),
+
   outputTokens:
     z.number().int().min(0),
+
+  cachedInputTokens:
+    z.number().int().min(0).default(0),
+
+  reasoningTokens:
+    z.number().int().min(0).default(0),
+
+  estimatedCostUsd:
+    z.number().finite().min(0).optional(),
 });
 
 export const AgentModelExecutionResultSchema = z.object({
@@ -81,9 +91,6 @@ export type AgentModelExecutionInput = {
     maxOutputChars: number;
     timeoutMs: number;
 
-    /**
-     * Provider/framework prompts must treat these as hard runtime rules.
-     */
     hiddenChainOfThoughtMustNotBePersisted: true;
     financialExecutionToolsAvailable: false;
     workflowMutationOnlyThroughControlPlane: true;
@@ -93,22 +100,23 @@ export type AgentModelExecutionInput = {
 export interface AgentModelAdapter {
   id: string;
 
-  /**
-   * Provider/framework adapters receive a governed tool invoker rather than
-   * raw credentials, registries or application stores.
-   */
   execute(input: {
     execution:
       AgentModelExecutionInput;
+
     tools:
       AgentToolInvoker;
+
     signal:
       AbortSignal;
-  }): Promise<AgentModelExecutionResultInput>;
+  }): Promise<
+    AgentModelExecutionResultInput
+  >;
 }
 
 export function normalizeAgentModelExecutionResult(
-  input: AgentModelExecutionResultInput,
+  input:
+    AgentModelExecutionResultInput,
 ): AgentModelExecutionResult {
   return AgentModelExecutionResultSchema.parse(
     input,

@@ -41,8 +41,8 @@ import {
 } from '@/lib/control-plane/trusted-agent-runtime-worker';
 
 import {
-  SqliteInternalRuntimeStore,
-} from '@/lib/control-plane/sqlite-runtime-store';
+  SqliteHardenedRuntimeStore,
+} from '@/lib/control-plane/sqlite-hardened-runtime-store';
 
 let tempDir:
   | string
@@ -57,7 +57,6 @@ afterEach(() => {
         force: true,
       },
     );
-
     tempDir = null;
   }
 });
@@ -71,7 +70,7 @@ function store() {
       ),
     );
 
-  return new SqliteInternalRuntimeStore(
+  return new SqliteHardenedRuntimeStore(
     path.join(
       tempDir,
       'cp.db',
@@ -80,13 +79,12 @@ function store() {
 }
 
 describe(
-  'V2I.2A trusted runtime worker',
+  'trusted runtime worker',
   () => {
     test(
-      'rejects a valid token issued for a different employee before any task can run',
+      'rejects a token issued for a different employee',
       () => {
-        const cp =
-          store();
+        const cp = store();
 
         const authority =
           new HmacRuntimeIdentityAuthority(
@@ -98,30 +96,23 @@ describe(
           );
 
         const token =
-          authority
-            .issueAgentSession({
-              profile:
-                getCompanyAgentRuntimeProfile(
-                  'pepo',
-                ),
-
-              ttlMs:
-                60_000,
-            })
-            .token;
+          authority.issueAgentSession({
+            profile:
+              getCompanyAgentRuntimeProfile(
+                'pepo',
+              ),
+            ttlMs: 60_000,
+          }).token;
 
         const model:
           AgentModelAdapter = {
-          id:
-            'fake-model',
-
+          id: 'fake-model',
           async execute() {
             return {
               usage: {
                 inputTokens: 1,
                 outputTokens: 1,
               },
-
               output: {
                 summary:
                   'Nothing.',
@@ -135,33 +126,24 @@ describe(
           new TrustedCompanyAgentRuntimeWorker({
             agentId:
               'lauti',
-
             identityToken:
               token,
-
             identityVerifier:
               authority,
-
             store:
               cp,
-
             modelAdapter:
               model,
-
             brainContext:
               new EmptyAgentBrainContextProvider(),
-
             toolRegistry:
               new AgentReadToolRegistry(),
-
             runner: {
               workerId:
                 'trusted-lauti-worker',
-
               batchSize: 1,
               leaseMs: 30_000,
             },
-
             clock: () =>
               '2026-01-01T00:00:30.000Z',
           }),
@@ -174,10 +156,9 @@ describe(
     );
 
     test(
-      'valid signed identity allows the hardened worker to run its own queue only',
+      'valid identity registers worker and runs only its own queue',
       async () => {
-        const cp =
-          store();
+        const cp = store();
 
         const authority =
           new HmacRuntimeIdentityAuthority(
@@ -194,48 +175,38 @@ describe(
           );
 
         const token =
-          authority
-            .issueAgentSession({
-              profile,
-
-              ttlMs:
-                60_000,
-            })
-            .token;
+          authority.issueAgentSession({
+            profile,
+            ttlMs: 60_000,
+          }).token;
 
         cp.upsertAgentRuntimeTask({
           taskId:
             'task-lauti',
-
           handoffId:
             'handoff-lauti',
-
           agentId:
             'lauti',
-
-          action:
-            'noop',
-
+          action: 'noop',
           summary:
             'Identity test.',
-
           createdAt:
             '2026-01-01T00:00:00.000Z',
-
           availableAt:
             '2026-01-01T00:00:00.000Z',
-
           updatedAt:
             '2026-01-01T00:00:00.000Z',
-
           retryPolicy: {
             maxAttempts: 3,
-            initialDelayMs: 1_000,
-            backoffMultiplier: 2,
-            maxDelayMs: 10_000,
-            timeoutMs: 30_000,
+            initialDelayMs:
+              1_000,
+            backoffMultiplier:
+              2,
+            maxDelayMs:
+              10_000,
+            timeoutMs:
+              30_000,
           },
-
           policyEvidence: [],
           payload: {},
         });
@@ -243,61 +214,43 @@ describe(
         cp.upsertAgentRuntimeTask({
           taskId:
             'task-pepo',
-
           handoffId:
             'handoff-pepo',
-
           agentId:
             'pepo',
-
-          action:
-            'noop',
-
+          action: 'noop',
           summary:
             'Other agent task.',
-
           createdAt:
             '2026-01-01T00:00:00.000Z',
-
           availableAt:
             '2026-01-01T00:00:00.000Z',
-
           updatedAt:
             '2026-01-01T00:00:00.000Z',
-
           retryPolicy: {
             maxAttempts: 3,
-            initialDelayMs: 1_000,
-            backoffMultiplier: 2,
-            maxDelayMs: 10_000,
-            timeoutMs: 30_000,
+            initialDelayMs:
+              1_000,
+            backoffMultiplier:
+              2,
+            maxDelayMs:
+              10_000,
+            timeoutMs:
+              30_000,
           },
-
           policyEvidence: [],
           payload: {},
         });
 
         const model:
           AgentModelAdapter = {
-          id:
-            'fake-model',
-
-          async execute({
-            execution,
-          }) {
-            expect(
-              execution.profile
-                .agentId,
-            ).toBe(
-              'lauti',
-            );
-
+          id: 'fake-model',
+          async execute() {
             return {
               usage: {
                 inputTokens: 1,
                 outputTokens: 1,
               },
-
               output: {
                 summary:
                   'Completed.',
@@ -311,42 +264,31 @@ describe(
           new TrustedCompanyAgentRuntimeWorker({
             agentId:
               'lauti',
-
             identityToken:
               token,
-
             identityVerifier:
               authority,
-
             store:
               cp,
-
             modelAdapter:
               model,
-
             brainContext:
               new EmptyAgentBrainContextProvider(),
-
             toolRegistry:
               new AgentReadToolRegistry(),
-
             runner: {
               workerId:
                 'trusted-lauti-worker',
-
               batchSize: 1,
               leaseMs: 30_000,
             },
-
             clock: () =>
               '2026-01-01T00:00:30.000Z',
           });
 
         expect(
-          worker.sessionId,
-        ).toBe(
-          'session-lauti',
-        );
+          cp.listRuntimeWorkers(),
+        ).toHaveLength(1);
 
         const result =
           await worker.runOnce();
@@ -361,21 +303,19 @@ describe(
 
         expect(
           cp.listAgentRuntimeTasks({
-            agentId:
-              'lauti',
+            agentId: 'lauti',
           })[0].status,
-        ).toBe(
-          'completed',
-        );
+        ).toBe('completed');
 
         expect(
           cp.listAgentRuntimeTasks({
-            agentId:
-              'pepo',
+            agentId: 'pepo',
           })[0].status,
-        ).toBe(
-          'queued',
-        );
+        ).toBe('queued');
+
+        expect(
+          cp.listExecutionRuns(),
+        ).toHaveLength(1);
 
         cp.close();
       },
