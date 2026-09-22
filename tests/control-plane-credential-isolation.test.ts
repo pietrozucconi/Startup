@@ -184,6 +184,14 @@ describe(
 
           effect:
             'read',
+
+          inputSchema: {
+            type:
+              'object',
+
+            additionalProperties:
+              true,
+          },
         });
 
         expect(

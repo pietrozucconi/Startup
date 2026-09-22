@@ -61,12 +61,37 @@ describe('Anthropic Messages model adapter', () => {
     const toolCalls: string[] = [];
     const tools: AgentToolInvoker = {
       listAvailableTools() {
-        return [{
-          id: 'tavily-web-search',
-          capability: 'web-research',
-          description: 'Search public web.',
-          effect: 'read',
-        }];
+        return [
+          {
+            id:
+              'web-search',
+
+            capability:
+              'web-research',
+
+            description:
+              'Search the web.',
+
+            effect:
+              'read',
+
+            inputSchema: {
+              type:
+                'object',
+
+              properties: {
+                query: {
+                  type:
+                    'string',
+                },
+              },
+
+              required: [
+                'query',
+              ],
+            },
+          },
+        ];
       },
       async invoke(toolId) {
         toolCalls.push(toolId);

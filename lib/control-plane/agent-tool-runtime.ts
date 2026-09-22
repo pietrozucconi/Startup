@@ -64,6 +64,13 @@ export interface AgentReadToolAdapter {
   description: string;
 
   /**
+   * JSON Schema exposed to the model for tool arguments.
+   * It must describe INPUT only and must never contain secrets.
+   */
+  inputSchema?:
+    Record<string, unknown>;
+
+  /**
    * Opaque handle only. The model never sees this value.
    * Trusted infrastructure resolves it immediately before adapter execution.
    */
@@ -95,6 +102,9 @@ export type AgentToolDescriptor = {
     AgentToolCapability;
   description: string;
   effect: 'read';
+
+  inputSchema:
+    Record<string, unknown>;
 };
 
 export type AgentToolCallTrace = {
@@ -175,6 +185,14 @@ export class AgentReadToolRegistry {
         ...rawAdapter,
         capability,
         credentialHandle,
+        inputSchema:
+          rawAdapter.inputSchema ??
+          {
+            type:
+              'object',
+            additionalProperties:
+              true,
+          },
       },
     );
   }
@@ -218,6 +236,16 @@ export class AgentReadToolRegistry {
             tool.description,
           effect:
             'read' as const,
+          inputSchema:
+            structuredClone(
+              tool.inputSchema ??
+              {
+                type:
+                  'object',
+                additionalProperties:
+                  true,
+              },
+            ),
         }),
       )
       .sort(
@@ -237,13 +265,6 @@ function errorMessage(
     : String(error);
 }
 
-/**
- * Per-execution read-tool broker.
- *
- * The model/framework never receives the registry or the credential vault.
- * Credential resolution happens only inside this trusted runtime immediately
- * before invoking the trusted tool adapter.
- */
 export class GovernedAgentToolRuntime
   implements AgentToolInvoker
 {
