@@ -1,82 +1,13 @@
-import { ListChecks } from 'lucide-react';
+import Link from 'next/link';
+import { AlertTriangle, ListChecks } from 'lucide-react';
 import { PageHeader } from '@/components/PageHeader';
-
-export const dynamic = 'force-dynamic';
-
-export default function TasksPage() {
-  return (
-    <div>
-      <PageHeader
-        eyebrow="company work"
-        title="Tasks"
-      />
-
-      <div className="mb-8 max-w-3xl">
-        <p className="text-sm leading-relaxed text-os-muted">
-          Company tasks and agent assignments will appear here as workflows
-          become operational.
-        </p>
-
-        <p className="mt-2 text-sm leading-relaxed text-os-dim">
-          No company tasks have been created yet.
-        </p>
-      </div>
-
-      <section className="rounded-lg-t border border-dashed border-os-border p-6">
-        <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md-t border border-os-border bg-os-surface2">
-            <ListChecks className="h-5 w-5 text-os-muted" />
-          </div>
-
-          <div>
-            <div className="text-sm font-semibold">
-              No company tasks yet
-            </div>
-
-            <p className="mt-2 text-sm leading-relaxed text-os-muted">
-              Tasks will be created by the company workflow system and assigned
-              to agents when their production runtimes are connected.
-            </p>
-
-            <p className="mt-2 text-sm leading-relaxed text-os-dim">
-              Future tasks will preserve ownership, status, approvals,
-              dependencies and audit history.
-            </p>
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-4 grid grid-cols-3 gap-3 max-[900px]:grid-cols-1">
-        <div className="rounded-lg-t border border-os-border bg-os-surface p-4">
-          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
-            Open tasks
-          </div>
-
-          <div className="mt-2 text-2xl font-semibold">
-            0
-          </div>
-        </div>
-
-        <div className="rounded-lg-t border border-os-border bg-os-surface p-4">
-          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
-            Waiting approval
-          </div>
-
-          <div className="mt-2 text-2xl font-semibold">
-            0
-          </div>
-        </div>
-
-        <div className="rounded-lg-t border border-os-border bg-os-surface p-4">
-          <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
-            Completed
-          </div>
-
-          <div className="mt-2 text-2xl font-semibold">
-            0
-          </div>
-        </div>
-      </section>
-    </div>
-  );
-}
+import { getControlPlaneRuntimeStore } from '@/lib/control-plane/runtime-data';
+import { redriveAgentTaskAction } from '@/lib/control-plane/operator-actions';
+export const dynamic='force-dynamic';
+const statusClass=(s:string)=>s==='completed'?'text-os-ok':s==='dead_letter'?'text-os-err':s==='running'?'text-os-warn':'text-os-muted';
+export default function TasksPage(){ const store=getControlPlaneRuntimeStore(); const tasks=store.listAgentRuntimeTasks(); const inbox=store.listCeoInbox(); const open=tasks.filter(t=>t.status==='queued'||t.status==='running').length; const completed=tasks.filter(t=>t.status==='completed').length; const dead=tasks.filter(t=>t.status==='dead_letter'); return <div>
+<PageHeader eyebrow="company work" title="Tasks" right={<Link href="/approvals" className="rounded-sm-t border border-os-border px-3 py-2 font-mono text-[10px] uppercase tracking-[0.14em] text-os-muted hover:border-os-border-strong hover:text-os-text">CEO inbox · {inbox.filter(i=>i.status!=='resolved').length}</Link>} />
+<div className="mb-6 max-w-3xl"><p className="text-sm leading-relaxed text-os-muted">Durable work orders created by governed Control Plane handoffs.</p><p className="mt-2 text-sm leading-relaxed text-os-dim">Completing a runtime task does not change workflow state. Agent outputs must return through the Control Plane.</p></div>
+<section className="mb-6 grid grid-cols-4 gap-3 max-[1000px]:grid-cols-2 max-[650px]:grid-cols-1">{[['Open tasks',open],['Waiting CEO',inbox.filter(i=>i.status!=='resolved').length],['Completed',completed],['Dead letter',dead.length]].map(([l,v])=><div key={String(l)} className="rounded-lg-t border border-os-border bg-os-surface p-4"><div className="font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">{l}</div><div className="mt-2 text-2xl font-semibold">{v}</div></div>)}</section>
+{tasks.length===0?<section className="rounded-lg-t border border-dashed border-os-border p-6"><div className="flex items-start gap-4"><div className="flex h-10 w-10 shrink-0 items-center justify-center border border-os-border bg-os-surface2"><ListChecks className="h-5 w-5 text-os-muted"/></div><div><div className="text-sm font-semibold">No runtime tasks yet</div><p className="mt-2 text-sm text-os-muted">Tasks will appear when real governed workflows create handoffs for company agents.</p></div></div></section>:<section className="overflow-hidden rounded-lg-t border border-os-border">{tasks.map(t=><div key={t.taskId} className="border-b border-os-border px-4 py-4 last:border-b-0"><div className="grid grid-cols-[120px_150px_minmax(0,1fr)_120px_90px] gap-3 max-[900px]:grid-cols-1"><div className={`font-mono text-[10px] uppercase ${statusClass(t.status)}`}>{t.status}</div><div className="text-sm font-semibold">{t.agentId}</div><div><div className="text-sm">{t.summary}</div><div className="mt-1 break-all font-mono text-[10px] text-os-dim">{t.action}</div>{t.lastError&&<div className="mt-2 flex gap-2 text-xs text-os-err"><AlertTriangle className="h-3.5 w-3.5"/>{t.lastError}</div>}</div><div className="font-mono text-[10px] text-os-muted">{t.workflowId??'—'}</div><div className="font-mono text-[10px] text-os-muted">{t.attempts}/{t.retryPolicy.maxAttempts}</div></div>{t.status==='dead_letter'&&<form action={redriveAgentTaskAction} className="mt-4 flex flex-wrap gap-2"><input type="hidden" name="taskId" value={t.taskId}/><input name="reason" required placeholder="Reason for controlled retry" className="min-w-[260px] flex-1 border border-os-border bg-os-bg px-3 py-2 text-xs"/><button className="border border-os-border px-3 py-2 font-mono text-[10px] uppercase">Redrive task</button></form>}</div>)}</section>}
+</div>;}

@@ -7,7 +7,15 @@ import path from 'node:path';
 // before any page module is imported. 
 
 beforeAll(() => {
-  process.env.STARTUP_DB = path.join(mkdtempSync(path.join(tmpdir(), 'startup-smoke-')), 'test.db');
+  const tempDir = mkdtempSync(
+    path.join(tmpdir(), 'startup-smoke-'),
+  );
+
+  process.env.STARTUP_DB =
+    path.join(tempDir, 'startup.db');
+
+  process.env.STARTUP_CONTROL_PLANE_DB =
+    path.join(tempDir, 'control-plane.db');
 });
 
 type PageEntry = {
@@ -20,15 +28,53 @@ type PageEntry = {
 
 // Every app/**/page.tsx, with the props each needs to be invoked.
 const PAGES: PageEntry[] = [
-  { file: 'page.tsx', load: () => import('@/app/page') },
-  { file: 'agents/page.tsx', load: () => import('@/app/agents/page') },
-  { file: 'tasks/page.tsx', load: () => import('@/app/tasks/page') },
-  { file: 'skills/page.tsx', load: () => import('@/app/skills/page') },
-  { file: 'workflows/page.tsx', load: () => import('@/app/workflows/page') },
-  { file: 'org/page.tsx', load: () => import('@/app/org/page'), props: { searchParams: {} } },
-  { file: 'brain/page.tsx', load: () => import('@/app/brain/page') },
-  { file: 'integrations/page.tsx', load: () => import('@/app/integrations/page') },
-  { file: 'analytics/page.tsx', load: () => import('@/app/analytics/page') },
+  {
+    file: 'page.tsx',
+    load: () => import('@/app/page'),
+  },
+  {
+    file: 'agents/page.tsx',
+    load: () => import('@/app/agents/page'),
+  },
+  {
+    file: 'tasks/page.tsx',
+    load: () => import('@/app/tasks/page'),
+  },
+  {
+    file: 'skills/page.tsx',
+    load: () => import('@/app/skills/page'),
+  },
+  {
+    file: 'workflows/page.tsx',
+    load: () => import('@/app/workflows/page'),
+  },
+  {
+    file: 'approvals/page.tsx',
+    load: () => import('@/app/approvals/page'),
+  },
+  {
+    file: 'control-plane/page.tsx',
+    load: () => import('@/app/control-plane/page'),
+  },
+  {
+    file: 'org/page.tsx',
+    load: () => import('@/app/org/page'),
+    props: {
+      searchParams: {},
+    },
+  },
+  {
+    file: 'brain/page.tsx',
+    load: () => import('@/app/brain/page'),
+  },
+  {
+    file: 'integrations/page.tsx',
+    load: () => import('@/app/integrations/page'),
+  },
+  {
+    file: 'analytics/page.tsx',
+    load: () => import('@/app/analytics/page'),
+  },
 ];
 
 function discoverPages(dir: string, base = ''): string[] {

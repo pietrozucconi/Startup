@@ -17,6 +17,7 @@ describe('shared nav config', () => {
     expect(NAV_OPERATE.map((n) => n.href)).toEqual([
       '/',
       '/workflows',
+      '/approvals',
     ]);
 
     expect(NAV_AGENTS.map((n) => n.href)).toEqual([
@@ -31,6 +32,7 @@ describe('shared nav config', () => {
     ]);
 
     expect(NAV_SYSTEM.map((n) => n.href)).toEqual([
+      '/control-plane',
       '/integrations',
       '/analytics',
     ]);
