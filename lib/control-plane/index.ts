@@ -42,3 +42,6 @@ export * from '@/lib/control-plane/agent-model-adapter';
 export * from '@/lib/control-plane/bounded-agent-executor';
 export * from '@/lib/control-plane/agent-runtime-worker';
 export * from '@/lib/control-plane/request-fingerprint';
+export * from '@/lib/control-plane/runtime-identity';
+export * from '@/lib/control-plane/credential-vault';
+export * from '@/lib/control-plane/trusted-agent-runtime-worker';

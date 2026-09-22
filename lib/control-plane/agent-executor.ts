@@ -101,6 +101,8 @@ export type AgentExecutorRunnerOptions = {
   workerId: string;
   batchSize: number;
   leaseMs: number;
+
+  principalSessionId?: string;
 };
 
 export type AgentExecutorRunnerResult = {
@@ -333,6 +335,10 @@ export class GovernedAgentExecutorRunner {
         kind: 'agent' as const,
         id: task.agentId,
       },
+
+      sessionId:
+        this.options
+        .principalSessionId
     };
 
     switch (operation.type) {

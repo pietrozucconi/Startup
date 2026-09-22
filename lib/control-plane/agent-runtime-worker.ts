@@ -12,6 +12,10 @@ import type {
 } from '@/lib/control-plane/brain-context-provider';
 
 import type {
+  AgentCredentialVault,
+} from '@/lib/control-plane/credential-vault';
+
+import type {
   AgentModelAdapter,
 } from '@/lib/control-plane/agent-model-adapter';
 
@@ -36,10 +40,10 @@ type CompanyAgentWorkerStore =
   AtomicControlPlaneStore;
 
 /**
- * Composes the V2H context/tool/model boundary with the V2G governed runner.
+ * Foundation worker composition.
  *
- * This object performs one finite polling iteration. Scheduling/process
- * supervision remains infrastructure-owned; the worker never self-schedules.
+ * Real provider integrations must use TrustedCompanyAgentRuntimeWorker from
+ * trusted-agent-runtime-worker.ts so a signed runtime identity is mandatory.
  */
 export class CompanyAgentRuntimeWorker {
   private readonly runner:
@@ -47,22 +51,32 @@ export class CompanyAgentRuntimeWorker {
 
   constructor(input: {
     agentId: string;
+
     store:
       CompanyAgentWorkerStore;
+
     modelAdapter:
       AgentModelAdapter;
+
     brainContext:
       AgentBrainContextProvider;
+
     toolRegistry:
       AgentReadToolRegistry;
+
+    credentialVault?:
+      AgentCredentialVault;
+
     runner:
       AgentExecutorRunnerOptions;
+
     clock?: () => string;
   }) {
     const clock =
       input.clock ??
       (() =>
-        new Date().toISOString());
+        new Date()
+          .toISOString());
 
     const profile =
       getCompanyAgentRuntimeProfile(
@@ -76,6 +90,7 @@ export class CompanyAgentRuntimeWorker {
         input.brainContext,
         input.toolRegistry,
         clock,
+        input.credentialVault,
       );
 
     this.runner =
@@ -88,6 +103,7 @@ export class CompanyAgentRuntimeWorker {
   }
 
   async runOnce() {
-    return this.runner.runOnce();
+    return this.runner
+      .runOnce();
   }
 }

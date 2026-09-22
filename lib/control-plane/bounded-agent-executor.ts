@@ -16,6 +16,10 @@ import {
 } from '@/lib/control-plane/agent-tool-runtime';
 
 import type {
+  AgentCredentialVault,
+} from '@/lib/control-plane/credential-vault';
+
+import type {
   AgentBrainContextProvider,
 } from '@/lib/control-plane/brain-context-provider';
 
@@ -30,13 +34,16 @@ import type {
 
 type RuntimeEvidence = {
   brainNodeIds: string[];
-  externalProvenance: ProvenanceRef[];
-  toolCalls: AgentToolCallTrace[];
+  externalProvenance:
+    ProvenanceRef[];
+  toolCalls:
+    AgentToolCallTrace[];
 };
 
 function attachEvidence(
   output:
     AgentExecutorOutputInput,
+
   evidence:
     RuntimeEvidence,
 ): AgentExecutorOutputInput {
@@ -47,6 +54,7 @@ function attachEvidence(
 
   return {
     ...parsed,
+
     operations:
       parsed.operations.map(
         (operation) => {
@@ -58,8 +66,10 @@ function attachEvidence(
           ) {
             return {
               ...operation,
+
               metadata: {
                 ...operation.metadata,
+
                 runtimeEvidence:
                   evidence,
               },
@@ -73,7 +83,8 @@ function attachEvidence(
 }
 
 function outputChars(
-  output: AgentExecutorOutputInput,
+  output:
+    AgentExecutorOutputInput,
 ): number {
   return JSON.stringify(
     output,
@@ -96,14 +107,22 @@ export class BoundedModelAgentExecutor
   constructor(
     private readonly profile:
       CompanyAgentRuntimeProfile,
+
     private readonly modelAdapter:
       AgentModelAdapter,
+
     private readonly brainContext:
       AgentBrainContextProvider,
+
     private readonly toolRegistry:
       AgentReadToolRegistry,
-    private readonly clock: () => string = () =>
-      new Date().toISOString(),
+
+    private readonly clock:
+      () => string = () =>
+        new Date().toISOString(),
+
+    private readonly credentialVault?:
+      AgentCredentialVault,
   ) {
     this.agentId =
       profile.agentId;
@@ -113,8 +132,11 @@ export class BoundedModelAgentExecutor
   }
 
   async execute(
-    context: AgentExecutorContext,
-  ): Promise<AgentExecutorOutputInput> {
+    context:
+      AgentExecutorContext,
+  ): Promise<
+    AgentExecutorOutputInput
+  > {
     if (
       context.task.agentId !==
       this.profile.agentId
@@ -142,19 +164,25 @@ export class BoundedModelAgentExecutor
         context.idempotencyKey;
 
       const brain =
-        await this.brainContext.retrieve({
-          profile:
-            this.profile,
-          task:
-            context.task,
-          workflow:
-            context.workflow,
-          requestId:
-            `${executionId}:brain-read`,
-        });
+        await this
+          .brainContext
+          .retrieve({
+            profile:
+              this.profile,
+
+            task:
+              context.task,
+
+            workflow:
+              context.workflow,
+
+            requestId:
+              `${executionId}:brain-read`,
+          });
 
       if (
-        controller.signal.aborted
+        controller.signal
+          .aborted
       ) {
         throw new Error(
           'agent_execution_timeout',
@@ -168,51 +196,76 @@ export class BoundedModelAgentExecutor
           this.toolRegistry,
           controller.signal,
           this.clock,
+          this.credentialVault,
         );
 
       const modelPromise =
-        this.modelAdapter.execute({
-          execution: {
-            executionId,
-            profile:
-              this.profile,
-            task:
-              context.task,
-            workflow:
-              context.workflow,
-            brain,
-            availableTools:
-              tools.listAvailableTools(),
-            idempotencyKey:
-              context.idempotencyKey,
-            constraints: {
-              maxToolCalls:
-                this.profile.budget
-                  .maxToolCalls,
-              maxInputTokens:
-                this.profile.budget
-                  .maxInputTokens,
-              maxOutputTokens:
-                this.profile.budget
-                  .maxOutputTokens,
-              maxOutputChars:
-                this.profile.budget
-                  .maxOutputChars,
-              timeoutMs:
-                this.profile.budget
-                  .timeoutMs,
-              hiddenChainOfThoughtMustNotBePersisted:
-                true,
-              financialExecutionToolsAvailable:
-                false,
-              workflowMutationOnlyThroughControlPlane:
-                true,
+        this.modelAdapter
+          .execute({
+            execution: {
+              executionId,
+
+              profile:
+                this.profile,
+
+              task:
+                context.task,
+
+              workflow:
+                context.workflow,
+
+              brain,
+
+              availableTools:
+                tools
+                  .listAvailableTools(),
+
+              idempotencyKey:
+                context
+                  .idempotencyKey,
+
+              constraints: {
+                maxToolCalls:
+                  this.profile
+                    .budget
+                    .maxToolCalls,
+
+                maxInputTokens:
+                  this.profile
+                    .budget
+                    .maxInputTokens,
+
+                maxOutputTokens:
+                  this.profile
+                    .budget
+                    .maxOutputTokens,
+
+                maxOutputChars:
+                  this.profile
+                    .budget
+                    .maxOutputChars,
+
+                timeoutMs:
+                  this.profile
+                    .budget
+                    .timeoutMs,
+
+                hiddenChainOfThoughtMustNotBePersisted:
+                  true,
+
+                financialExecutionToolsAvailable:
+                  false,
+
+                workflowMutationOnlyThroughControlPlane:
+                  true,
+              },
             },
-          },
-          tools,
-          signal:
-            controller.signal,
-        });
+
+            tools,
+
+            signal:
+              controller.signal,
+          });
 
       const timeoutPromise =
         new Promise<never>(
@@ -282,10 +335,14 @@ export class BoundedModelAgentExecutor
             (result) =>
               result.node.id,
           ),
+
         externalProvenance:
-          tools.getProvenance(),
+          tools
+            .getProvenance(),
+
         toolCalls:
-          tools.getTraces(),
+          tools
+            .getTraces(),
       };
 
       const enriched =
@@ -296,41 +353,56 @@ export class BoundedModelAgentExecutor
 
       return AgentExecutorOutputSchema.parse({
         ...enriched,
+
         metadata: {
           ...enriched.metadata,
+
           runtime: {
             executorId:
               this.id,
+
             modelAdapterId:
               this.modelAdapter.id,
+
             model:
               modelResult.model,
+
             finishReason:
-              modelResult.finishReason,
+              modelResult
+                .finishReason,
+
             usage:
               modelResult.usage,
-            toolCallCount:
-              tools.getCallCount(),
-            brainNodeIds:
-              evidence.brainNodeIds,
-            externalProvenance:
-              evidence.externalProvenance,
-            toolCalls:
-              evidence.toolCalls,
-            modelMetadata:
-              modelResult.metadata,
 
-            /**
-             * Runtime stores only structured summaries, evidence and governed
-             * outputs. Hidden chain-of-thought is never requested or stored.
-             */
+            toolCallCount:
+              tools
+                .getCallCount(),
+
+            brainNodeIds:
+              evidence
+                .brainNodeIds,
+
+            externalProvenance:
+              evidence
+                .externalProvenance,
+
+            toolCalls:
+              evidence
+                .toolCalls,
+
+            modelMetadata:
+              modelResult
+                .metadata,
+
             hiddenChainOfThoughtStored:
               false,
           },
         },
       });
     } finally {
-      clearTimeout(timer);
+      clearTimeout(
+        timer,
+      );
     }
   }
 }

@@ -12,15 +12,33 @@ import {
 } from '@/lib/control-plane/agent-runtime-profile';
 
 import type {
+  AgentCredentialVault,
+  ToolCredentialLease,
+} from '@/lib/control-plane/credential-vault';
+
+import {
+  AgentCredentialHandleSchema,
+} from '@/lib/control-plane/credential-vault';
+
+import type {
   AgentRuntimeTask,
 } from '@/lib/control-plane/runtime-schema';
 
 export const AgentToolResultSchema = z.object({
   summary: z.string().default(''),
   data: z.unknown().optional(),
-  provenance: z.array(ProvenanceRefSchema).default([]),
-  observedAt: TimestampSchema.optional(),
-  metadata: z.record(z.unknown()).default({}),
+  provenance: z
+    .array(
+      ProvenanceRefSchema,
+    )
+    .default([]),
+  observedAt:
+    TimestampSchema.optional(),
+  metadata:
+    z.record(
+      z.unknown(),
+    )
+    .default({}),
 });
 
 export type AgentToolResult = z.infer<
@@ -39,23 +57,42 @@ export type AgentReadToolContext = {
 
 export interface AgentReadToolAdapter {
   id: string;
-  capability: AgentToolCapability;
+
+  capability:
+    AgentToolCapability;
+
   description: string;
 
   /**
-   * V2H intentionally supports read/evidence tools only.
-   * Write/action/broker adapters do not implement this interface.
+   * Opaque handle only. The model never sees this value.
+   * Trusted infrastructure resolves it immediately before adapter execution.
    */
+  credentialHandle?: string;
+
   invoke(input: {
-    args: Record<string, unknown>;
-    context: AgentReadToolContext;
-    signal: AbortSignal;
-  }): Promise<AgentToolResultInput>;
+    args:
+      Record<
+        string,
+        unknown
+      >;
+
+    context:
+      AgentReadToolContext;
+
+    credentials?:
+      ToolCredentialLease;
+
+    signal:
+      AbortSignal;
+  }): Promise<
+    AgentToolResultInput
+  >;
 }
 
 export type AgentToolDescriptor = {
   id: string;
-  capability: AgentToolCapability;
+  capability:
+    AgentToolCapability;
   description: string;
   effect: 'read';
 };
@@ -63,7 +100,8 @@ export type AgentToolDescriptor = {
 export type AgentToolCallTrace = {
   sequence: number;
   toolId: string;
-  capability: AgentToolCapability;
+  capability:
+    AgentToolCapability;
   startedAt: string;
   completedAt: string;
   success: boolean;
@@ -72,22 +110,35 @@ export type AgentToolCallTrace = {
 };
 
 export interface AgentToolInvoker {
-  listAvailableTools(): AgentToolDescriptor[];
+  listAvailableTools():
+    AgentToolDescriptor[];
 
   invoke(
     toolId: string,
-    args?: Record<string, unknown>,
-  ): Promise<AgentToolResult>;
+    args?:
+      Record<
+        string,
+        unknown
+      >,
+  ): Promise<
+    AgentToolResult
+  >;
 }
 
 export class AgentReadToolRegistry {
   private readonly tools =
-    new Map<string, AgentReadToolAdapter>();
+    new Map<
+      string,
+      AgentReadToolAdapter
+    >();
 
   register(
-    rawAdapter: AgentReadToolAdapter,
+    rawAdapter:
+      AgentReadToolAdapter,
   ): void {
-    if (!rawAdapter.id.trim()) {
+    if (
+      !rawAdapter.id.trim()
+    ) {
       throw new Error(
         'agent_tool_id_required',
       );
@@ -98,8 +149,20 @@ export class AgentReadToolRegistry {
         rawAdapter.capability,
       );
 
+    const credentialHandle =
+      rawAdapter
+        .credentialHandle ===
+      undefined
+        ? undefined
+        : AgentCredentialHandleSchema.parse(
+            rawAdapter
+              .credentialHandle,
+          );
+
     if (
-      this.tools.has(rawAdapter.id)
+      this.tools.has(
+        rawAdapter.id,
+      )
     ) {
       throw new Error(
         `agent_tool_already_registered:${rawAdapter.id}`,
@@ -111,6 +174,7 @@ export class AgentReadToolRegistry {
       {
         ...rawAdapter,
         capability,
+        credentialHandle,
       },
     );
   }
@@ -119,16 +183,21 @@ export class AgentReadToolRegistry {
     toolId: string,
   ): AgentReadToolAdapter | null {
     return (
-      this.tools.get(toolId) ??
+      this.tools.get(
+        toolId,
+      ) ??
       null
     );
   }
 
   listForCapabilities(
-    capabilities: readonly AgentToolCapability[],
+    capabilities:
+      readonly AgentToolCapability[],
   ): AgentToolDescriptor[] {
     const allowed =
-      new Set(capabilities);
+      new Set(
+        capabilities,
+      );
 
     return [
       ...this.tools.values(),
@@ -141,7 +210,8 @@ export class AgentReadToolRegistry {
       )
       .map(
         (tool) => ({
-          id: tool.id,
+          id:
+            tool.id,
           capability:
             tool.capability,
           description:
@@ -152,7 +222,9 @@ export class AgentReadToolRegistry {
       )
       .sort(
         (a, b) =>
-          a.id.localeCompare(b.id),
+          a.id.localeCompare(
+            b.id,
+          ),
       );
   }
 }
@@ -168,9 +240,9 @@ function errorMessage(
 /**
  * Per-execution read-tool broker.
  *
- * The model/framework never receives the registry directly. Every invocation
- * passes through this object, which enforces the profile allowlist, the
- * execution call budget and cancellation signal.
+ * The model/framework never receives the registry or the credential vault.
+ * Credential resolution happens only inside this trusted runtime immediately
+ * before invoking the trusted tool adapter.
  */
 export class GovernedAgentToolRuntime
   implements AgentToolInvoker
@@ -181,19 +253,29 @@ export class GovernedAgentToolRuntime
     AgentToolCallTrace[] = [];
 
   private readonly provenance:
-    z.infer<typeof ProvenanceRefSchema>[] = [];
+    z.infer<
+      typeof ProvenanceRefSchema
+    >[] = [];
 
   constructor(
     private readonly profile:
       CompanyAgentRuntimeProfile,
+
     private readonly task:
       AgentRuntimeTask,
+
     private readonly registry:
       AgentReadToolRegistry,
+
     private readonly signal:
       AbortSignal,
-    private readonly clock: () => string = () =>
-      new Date().toISOString(),
+
+    private readonly clock:
+      () => string = () =>
+        new Date().toISOString(),
+
+    private readonly credentialVault?:
+      AgentCredentialVault,
   ) {}
 
   listAvailableTools():
@@ -207,16 +289,26 @@ export class GovernedAgentToolRuntime
 
   async invoke(
     toolId: string,
-    args: Record<string, unknown> = {},
-  ): Promise<AgentToolResult> {
-    if (this.signal.aborted) {
+    args:
+      Record<
+        string,
+        unknown
+      > = {},
+  ): Promise<
+    AgentToolResult
+  > {
+    if (
+      this.signal.aborted
+    ) {
       throw new Error(
         'agent_execution_cancelled',
       );
     }
 
     const adapter =
-      this.registry.get(toolId);
+      this.registry.get(
+        toolId,
+      );
 
     if (!adapter) {
       throw new Error(
@@ -238,7 +330,8 @@ export class GovernedAgentToolRuntime
 
     if (
       this.callCount >=
-      this.profile.budget.maxToolCalls
+      this.profile.budget
+        .maxToolCalls
     ) {
       throw new Error(
         `agent_tool_call_budget_exhausted:${this.profile.agentId}`,
@@ -254,18 +347,74 @@ export class GovernedAgentToolRuntime
       this.clock();
 
     try {
+      let credentials:
+        | ToolCredentialLease
+        | undefined;
+
+      if (
+        adapter
+          .credentialHandle
+      ) {
+        if (
+          !this.credentialVault
+        ) {
+          throw new Error(
+            `credential_vault_required:${adapter.id}`,
+          );
+        }
+
+        credentials =
+          await this
+            .credentialVault
+            .resolve({
+              handle:
+                adapter
+                  .credentialHandle,
+
+              context: {
+                agentId:
+                  this.profile
+                    .agentId,
+
+                taskId:
+                  this.task
+                    .taskId,
+
+                workflowId:
+                  this.task
+                    .workflowId,
+
+                toolId:
+                  adapter.id,
+
+                capability:
+                  adapter
+                    .capability,
+              },
+            });
+      }
+
       const result =
         AgentToolResultSchema.parse(
           await adapter.invoke({
             args,
+
             context: {
               agentId:
-                this.profile.agentId,
+                this.profile
+                  .agentId,
+
               taskId:
-                this.task.taskId,
+                this.task
+                  .taskId,
+
               workflowId:
-                this.task.workflowId,
+                this.task
+                  .workflowId,
             },
+
+            credentials,
+
             signal:
               this.signal,
           }),
@@ -288,7 +437,8 @@ export class GovernedAgentToolRuntime
         completedAt,
         success: true,
         provenanceCount:
-          result.provenance.length,
+          result.provenance
+            .length,
       });
 
       return result;
@@ -307,14 +457,17 @@ export class GovernedAgentToolRuntime
         success: false,
         provenanceCount: 0,
         error:
-          errorMessage(error),
+          errorMessage(
+            error,
+          ),
       });
 
       throw error;
     }
   }
 
-  getCallCount(): number {
+  getCallCount():
+    number {
     return this.callCount;
   }
 
@@ -326,7 +479,9 @@ export class GovernedAgentToolRuntime
   }
 
   getProvenance():
-    z.infer<typeof ProvenanceRefSchema>[] {
+    z.infer<
+      typeof ProvenanceRefSchema
+    >[] {
     return structuredClone(
       this.provenance,
     );
