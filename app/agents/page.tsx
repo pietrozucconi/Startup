@@ -10,6 +10,10 @@ import { getDb } from '@/lib/data';
 import { PageHeader } from '@/components/PageHeader';
 import { Badge, Dot, SectionHead } from '@/components/terminal';
 import type { Agent, Department } from '@/lib/schemas';
+import {
+  AgentModelSelect,
+} from '@/components/AgentModelSelect';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -52,9 +56,6 @@ function AgentCard({
 }) {
   const active = agent.status === 'active';
 
-  const hasAssignedModel =
-    agent.model &&
-    agent.model !== 'unassigned';
 
   const hasRuntime =
     agent.instance &&
@@ -123,18 +124,21 @@ function AgentCard({
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-xs">
-          <Brain className="h-3.5 w-3.5 shrink-0 text-os-dim" />
+        <div className="flex items-start gap-2 text-xs">
+          <Brain className="mt-2 h-3.5 w-3.5 shrink-0 text-os-dim" />
 
-          <span className="text-os-dim">
+          <span className="mt-1.5 shrink-0 text-os-dim">
             Model:
           </span>
 
-          <span className="text-os-muted">
-            {hasAssignedModel
-              ? agent.model
-              : 'Not assigned'}
-          </span>
+          <AgentModelSelect
+            agentId={
+              agent.id
+            }
+            currentModel={
+              agent.model
+            }
+          />
         </div>
 
         <div className="flex items-center gap-2 text-xs">

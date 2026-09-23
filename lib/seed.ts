@@ -510,7 +510,23 @@ export function seedDatabase(db: FounderDb): void {
   }
 
   for (const agent of agents) {
-    db.agents.insert(agent);
+    const existing =
+      db.agents.byId(
+        agent.id,
+      );
+
+    db.agents.insert({
+      ...agent,
+
+      /*
+      * Model assignments are operational CEO decisions.
+      * Structural reseeding must never overwrite them.
+      */
+      model:
+        existing?.model?.trim()
+          ? existing.model
+          : agent.model,
+    });
   }
 
   // ----------------------------------------------------------------------

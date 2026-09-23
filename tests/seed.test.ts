@@ -174,6 +174,55 @@ describe('seedDatabase', () => {
     expect(db.tools.all().length).toBe(counts.tools);
   });
 
+  test(
+    're-seeding preserves CEO model assignments',
+    () => {
+      db =
+        openDb(
+          ':memory:',
+        );
+
+      seedDatabase(
+        db,
+      );
+
+      db.agentModelAssignments.assign({
+        id:
+          'assignment-1',
+
+        agentId:
+          'lauti',
+
+        previousModel:
+          'unassigned',
+
+        assignedModel:
+          'groq/openai/gpt-oss-120b',
+
+        assignedBy:
+          'ceo',
+
+        assignedAt:
+          '2026-09-22T21:00:00.000Z',
+      });
+
+      seedDatabase(
+        db,
+      );
+
+      expect(
+        db.agents
+          .byId(
+            'lauti',
+          )
+          ?.model,
+      ).toBe(
+        'groq/openai/gpt-oss-120b',
+      );
+    },
+  );
+
+
   test('seeded data passes schema validation end to end', () => {
     db = openDb(':memory:');
     seedDatabase(db);

@@ -26,6 +26,7 @@ const ROUTES: RouteEntry[] = [
   { route: 'departments', load: () => import('@/app/api/departments/route'), url: 'http://localhost/api/departments' },
   { route: 'keys', load: () => import('@/app/api/keys/route'), url: 'http://localhost/api/keys' },
   { route: 'tools', load: () => import('@/app/api/tools/route'), url: 'http://localhost/api/tools' },
+  { route: 'models/omniroute', load: () => import('@/app/api/models/omniroute/route'), url: 'http://localhost/api/models/omniroute',},
 ];
 
 function discoverGetRoutes(dir: string, base = ''): string[] {

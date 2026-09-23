@@ -30,6 +30,30 @@ export const AgentSchema = z.object({
   instance: z.string().min(1).default('builtin'),
 });
 
+export const AgentModelAssignmentSchema =
+  z.object({
+    id:
+      z.string().min(1),
+
+    agentId:
+      z.string().min(1),
+
+    previousModel:
+      z.string(),
+
+    assignedModel:
+      z.string().min(1),
+
+    assignedBy:
+      z.literal(
+        'ceo',
+      ),
+
+    assignedAt:
+      z.string().min(1),
+});
+
+
 export const ToolSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
@@ -175,3 +199,7 @@ export type AgentTask = z.infer<typeof AgentTaskSchema>;
 export type AgentCron = z.infer<typeof AgentCronSchema>;
 export type SkillStatus = z.infer<typeof SkillStatusSchema>;
 export type Skill = z.infer<typeof SkillSchema>;
+export type AgentModelAssignment =
+  z.infer<
+    typeof AgentModelAssignmentSchema
+  >;

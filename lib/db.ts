@@ -11,6 +11,7 @@ import {
   DepartmentSchema,
   SkillSchema,
   ToolSchema,
+  AgentModelAssignmentSchema,
   type Agent,
   type AgentCron,
   type AgentMessage,
@@ -21,6 +22,7 @@ import {
   type Department,
   type Skill,
   type Tool,
+  type AgentModelAssignment,
 } from '@/lib/schemas';
 
 const DDL = `
@@ -43,6 +45,19 @@ CREATE TABLE IF NOT EXISTS agents (
   model TEXT NOT NULL DEFAULT '',
   tools TEXT NOT NULL DEFAULT '[]'
 );
+
+CREATE TABLE IF NOT EXISTS agent_model_assignments (
+  id TEXT PRIMARY KEY,
+  agent_id TEXT NOT NULL,
+  previous_model TEXT NOT NULL,
+  assigned_model TEXT NOT NULL,
+  assigned_by TEXT NOT NULL CHECK (assigned_by = 'ceo'),
+  assigned_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS agent_model_assignments_agent_idx
+ON agent_model_assignments(agent_id, assigned_at);
+
 CREATE TABLE IF NOT EXISTS tools (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -148,6 +163,26 @@ type AgentRow = {
   instance: string;
 };
 
+type AgentModelAssignmentRow = {
+  id:
+    string;
+
+  agent_id:
+    string;
+
+  previous_model:
+    string;
+
+  assigned_model:
+    string;
+
+  assigned_by:
+    string;
+
+  assigned_at:
+    string;
+};
+
 function rowToAgent(row: AgentRow): Agent {
   return AgentSchema.parse({
     id: row.id,
@@ -161,6 +196,31 @@ function rowToAgent(row: AgentRow): Agent {
     tools: JSON.parse(row.tools),
     parentId: row.parent_id,
     instance: row.instance,
+  });
+}
+
+function rowToAgentModelAssignment(
+  row:
+    AgentModelAssignmentRow,
+): AgentModelAssignment {
+  return AgentModelAssignmentSchema.parse({
+    id:
+      row.id,
+
+    agentId:
+      row.agent_id,
+
+    previousModel:
+      row.previous_model,
+
+    assignedModel:
+      row.assigned_model,
+
+    assignedBy:
+      row.assigned_by,
+
+    assignedAt:
+      row.assigned_at,
   });
 }
 
@@ -194,6 +254,27 @@ export function openDb(path: string) {
     all(): Agent[] {
       return (db.prepare('SELECT * FROM agents ORDER BY tier, name').all() as AgentRow[]).map(rowToAgent);
     },
+    byId(
+      id:
+        string,
+    ): Agent | null {
+      const row =
+        db
+          .prepare(
+            'SELECT * FROM agents WHERE id = ?',
+          )
+          .get(
+            id,
+          ) as
+          | AgentRow
+          | undefined;
+
+      return row
+        ? rowToAgent(
+            row,
+          )
+        : null;
+    },
     byDepartment(departmentId: string): Agent[] {
       return (
         db
@@ -212,6 +293,150 @@ export function openDb(path: string) {
     deleteWhereIdNotIn(ids: string[]): void {
       const placeholders = ids.map(() => '?').join(', ');
       db.prepare(`DELETE FROM agents WHERE id NOT IN (${placeholders})`).run(...ids);
+    },
+  };
+
+  const agentModelAssignments = {
+    assign(
+      input:
+        AgentModelAssignment,
+    ): AgentModelAssignment {
+      const assignment =
+        AgentModelAssignmentSchema.parse(
+          input,
+        );
+
+
+      const transaction =
+        db.transaction(
+          () => {
+            const current =
+              db
+                .prepare(
+                  'SELECT model FROM agents WHERE id = ?',
+                )
+                .get(
+                  assignment.agentId,
+                ) as
+                | {
+                    model:
+                      string;
+                  }
+                | undefined;
+
+
+            if (
+              !current
+            ) {
+              throw new Error(
+                `agent_not_found:${assignment.agentId}`,
+              );
+            }
+
+
+            if (
+              current.model !==
+              assignment.previousModel
+            ) {
+              throw new Error(
+                `agent_model_assignment_conflict:${assignment.agentId}`,
+              );
+            }
+
+
+            if (
+              current.model ===
+              assignment.assignedModel
+            ) {
+              throw new Error(
+                `agent_model_assignment_unchanged:${assignment.agentId}`,
+              );
+            }
+
+
+            const updated =
+              db
+                .prepare(
+                  `
+                  UPDATE agents
+                  SET model = ?
+                  WHERE id = ?
+                    AND model = ?
+                  `,
+                )
+                .run(
+                  assignment.assignedModel,
+                  assignment.agentId,
+                  assignment.previousModel,
+                );
+
+
+            if (
+              updated.changes !==
+              1
+            ) {
+              throw new Error(
+                `agent_model_assignment_conflict:${assignment.agentId}`,
+              );
+            }
+
+
+            db
+              .prepare(
+                `
+                INSERT INTO agent_model_assignments
+                (
+                  id,
+                  agent_id,
+                  previous_model,
+                  assigned_model,
+                  assigned_by,
+                  assigned_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                `,
+              )
+              .run(
+                assignment.id,
+                assignment.agentId,
+                assignment.previousModel,
+                assignment.assignedModel,
+                assignment.assignedBy,
+                assignment.assignedAt,
+              );
+
+
+            return assignment;
+          },
+        );
+
+
+      return transaction();
+    },
+
+
+    byAgent(
+      agentId:
+        string,
+    ): AgentModelAssignment[] {
+      return (
+        db
+          .prepare(
+            `
+            SELECT *
+            FROM agent_model_assignments
+            WHERE agent_id = ?
+            ORDER BY assigned_at ASC, rowid ASC
+            `,
+          )
+          .all(
+            agentId,
+          ) as
+          AgentModelAssignmentRow[]
+      )
+        .map(
+          rowToAgentModelAssignment,
+        );
     },
   };
 
@@ -435,6 +660,7 @@ export function openDb(path: string) {
     agentCrons,
     broadcasts,
     skills,
+    agentModelAssignments,
     close: () => db.close(),
   };
 }
