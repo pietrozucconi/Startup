@@ -28,10 +28,27 @@ export const AgentRuntimeBudgetSchema = z.object({
 
 export const AgentBrainAccessSchema = z.object({
   enabled: z.boolean().default(true),
-  maxResults: z.number().int().positive().max(50).default(12),
-  maxHops: z.number().int().min(0).max(6).default(3),
-  maxContentCharsPerNode: z.number().int().min(0).max(25_000).default(4_000),
-  maxTotalContentChars: z.number().int().min(0).max(200_000).default(30_000),
+
+  initialResults:
+    z.number().int().positive().max(200).default(12),
+
+  expansionStep:
+    z.number().int().positive().max(200).default(12),
+
+  initialHops:
+    z.number().int().min(0).max(12).default(2),
+
+  technicalMaxResults:
+    z.number().int().positive().max(200).default(200),
+
+  technicalMaxHops:
+    z.number().int().min(0).max(12).default(12),
+
+  technicalMaxContentCharsPerNode:
+    z.number().int().min(0).max(100_000).default(100_000),
+
+  technicalMaxTotalContentChars:
+    z.number().int().min(0).max(1_000_000).default(1_000_000),
 });
 
 export const CompanyAgentRuntimeProfileSchema = z.object({

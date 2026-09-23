@@ -101,103 +101,284 @@ export class BrainGatewayAgentContextProvider
       .filter(Boolean)
       .join(' ');
 
-    const result =
-      await this.gateway.read({
-        requestId:
-          input.requestId,
+    let requestedLimit =
+      Math.min(
+        input.profile.brain
+          .initialResults,
+        input.profile.brain
+          .technicalMaxResults,
+      );
 
-        principal: {
-          actor: {
-            kind: 'agent',
-            id:
-              input.profile.agentId,
+    let requestedHops =
+      Math.min(
+        input.profile.brain
+          .initialHops,
+        input.profile.brain
+          .technicalMaxHops,
+      );
+
+    const seenNodeIds =
+      new Set<string>();
+
+    let finalResult:
+      Awaited<
+        ReturnType<
+          Pick<
+            BrainGateway,
+            'read'
+          >['read']
+        >
+      > |
+      null =
+      null;
+
+    let stoppedByTechnicalCeiling =
+      false;
+
+
+    while (true) {
+      const result =
+        await this.gateway.read({
+          requestId:
+            `${input.requestId}:brain:${requestedLimit}:${requestedHops}`,
+
+          principal: {
+            actor: {
+              kind: 'agent',
+              id:
+                input.profile.agentId,
+            },
+            departmentIds: [
+              input.profile.departmentId,
+            ],
+            capabilities: [
+              'brain.read',
+              'brain.retrieve',
+            ],
+            issuedBy:
+              'company-control-plane',
           },
-          departmentIds: [
-            input.profile.departmentId,
-          ],
-          capabilities: [
-            'brain.read',
-            'brain.retrieve',
-          ],
-          issuedBy:
-            'company-control-plane',
-        },
 
-        intent:
-          'institutional_memory',
+          intent:
+            'institutional_memory',
 
-        purpose:
-          `Retrieve only relevant institutional memory for runtime task ${input.task.taskId}.`,
+          purpose:
+            `Retrieve relevant institutional memory for runtime task ${input.task.taskId} using progressive semantic and graph expansion.`,
 
-        query: {
-          text: queryText,
-          departmentIds: [
-            input.profile.departmentId,
-          ],
-          agentIds: [
-            input.profile.agentId,
-          ],
-          assetIds,
-          maxHops:
-            input.profile.brain
-              .maxHops,
-          limit:
-            input.profile.brain
-              .maxResults,
-        },
+          query: {
+            text:
+              queryText,
 
-        context: {
-          departmentIds: [
-            input.profile.departmentId,
-          ],
-          agentIds: [
-            input.profile.agentId,
-          ],
-          assetIds,
-          workflowIds:
-            input.task.workflowId
-              ? [
-                  input.task
-                    .workflowId,
-                ]
-              : [],
-          taskIds: [
-            input.task.taskId,
-          ],
-          tags: [
-            'agent-runtime',
-          ],
-        },
+            seedNodeIds: [
+              'startup-brain',
+              input.profile.departmentId,
+              input.profile.agentId,
+            ],
 
-        budget: {
-          maxResults:
-            input.profile.brain
-              .maxResults,
-          maxHops:
-            input.profile.brain
-              .maxHops,
-          maxContentCharsPerNode:
-            input.profile.brain
-              .maxContentCharsPerNode,
-          maxTotalContentChars:
-            input.profile.brain
-              .maxTotalContentChars,
-          includeContent: true,
-          includeMetadata: true,
-        },
+            maxHops:
+              requestedHops,
 
-        requestedNodeTypes: [],
-      });
+            limit:
+              requestedLimit,
+          },
+
+          context: {
+            departmentIds: [
+              input.profile.departmentId,
+            ],
+            agentIds: [
+              input.profile.agentId,
+            ],
+            assetIds,
+            workflowIds:
+              input.task.workflowId
+                ? [
+                    input.task
+                      .workflowId,
+                  ]
+                : [],
+            taskIds: [
+              input.task.taskId,
+            ],
+            tags: [
+              'agent-runtime',
+            ],
+          },
+
+          budget: {
+            maxResults:
+              requestedLimit,
+
+            maxHops:
+              requestedHops,
+
+            maxContentCharsPerNode:
+              input.profile.brain
+                .technicalMaxContentCharsPerNode,
+
+            maxTotalContentChars:
+              input.profile.brain
+                .technicalMaxTotalContentChars,
+
+            includeContent:
+              true,
+
+            includeMetadata:
+              true,
+          },
+
+          requestedNodeTypes:
+            [],
+        });
+
+
+      finalResult =
+        result;
+
+
+      let newNodeCount =
+        0;
+
+
+      for (
+        const item
+        of result.results
+      ) {
+        if (
+          !seenNodeIds.has(
+            item.node.id,
+          )
+        ) {
+          seenNodeIds.add(
+            item.node.id,
+          );
+
+          newNodeCount +=
+            1;
+        }
+      }
+
+
+      if (
+        newNodeCount ===
+        0
+      ) {
+        break;
+      }
+
+
+      const atResultCeiling =
+        requestedLimit >=
+        input.profile.brain
+          .technicalMaxResults;
+
+
+      const atHopCeiling =
+        requestedHops >=
+        input.profile.brain
+          .technicalMaxHops;
+
+
+      if (
+        atResultCeiling &&
+        atHopCeiling
+      ) {
+        stoppedByTechnicalCeiling =
+          result.truncated ||
+          result.results.length >=
+            requestedLimit;
+
+        break;
+      }
+
+
+      if (
+        result.results.length <
+          requestedLimit &&
+        atHopCeiling
+      ) {
+        break;
+      }
+
+
+      const nextLimit =
+        result.results.length >=
+          requestedLimit
+          ? Math.min(
+              input.profile.brain
+                .technicalMaxResults,
+
+              requestedLimit +
+                input.profile.brain
+                  .expansionStep,
+            )
+          : requestedLimit;
+
+
+      const nextHops =
+        Math.min(
+          input.profile.brain
+            .technicalMaxHops,
+
+          requestedHops +
+            1,
+        );
+
+
+      if (
+        nextLimit ===
+          requestedLimit &&
+        nextHops ===
+          requestedHops
+      ) {
+        stoppedByTechnicalCeiling =
+          true;
+
+        break;
+      }
+
+
+      requestedLimit =
+        nextLimit;
+
+      requestedHops =
+        nextHops;
+    }
+
+
+    if (
+      !finalResult
+    ) {
+      return {
+        route:
+          null,
+
+        results:
+          [],
+
+        truncated:
+          false,
+
+        totalContentChars:
+          0,
+      };
+    }
+
 
     return {
       route:
-        result.route,
+        finalResult.route,
+
       results:
-        result.results,
+        finalResult.results,
+
       truncated:
-        result.truncated,
+        finalResult.truncated ||
+        stoppedByTechnicalCeiling,
+
       totalContentChars:
-        result.totalContentChars,
+        finalResult.totalContentChars,
     };
   }
 }
+
