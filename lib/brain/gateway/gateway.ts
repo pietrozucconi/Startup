@@ -21,6 +21,10 @@ import {
   projectNodeForRead,
 } from '@/lib/brain/gateway/budget';
 
+import type {
+  BrainRetrievalBackend,
+} from '@/lib/brain/gateway/retrieval-backend';
+
 import {
   canCommitMutation,
   canInspectBrainHealth,
@@ -63,10 +67,20 @@ function makeAuditId(
 
 export class BrainGateway {
   constructor(
-    private readonly graphStore: BrainGraphStore,
-    private readonly auditStore: BrainAuditStore,
-    private readonly clock: () => string = () =>
-      new Date().toISOString(),
+    private readonly graphStore:
+      BrainGraphStore,
+
+    private readonly auditStore:
+      BrainAuditStore,
+
+    private readonly clock:
+      () => string =
+        () =>
+          new Date()
+            .toISOString(),
+
+    private readonly retrievalBackend?:
+      BrainRetrievalBackend,
   ) {}
 
   private async audit(
@@ -137,27 +151,58 @@ export class BrainGateway {
     const graph =
       await this.graphStore.getSnapshot();
 
-    const retrieval = retrieveBrainGraph(
-      graph,
-      {
-        ...request.query,
-        maxHops: Math.min(
-          request.query.maxHops,
-          request.budget.maxHops,
-        ),
-        limit: Math.min(
-          request.query.limit,
-          request.budget.maxResults,
-        ),
-        nodeTypes:
-          request.requestedNodeTypes.length > 0
-            ? request.requestedNodeTypes
-            : request.query.nodeTypes,
-      },
-      {
-        now: request.query.asOf ?? this.clock(),
-      },
-    );
+    const retrieval =
+      this.retrievalBackend
+        ? await this.retrievalBackend
+            .retrieve({
+              request,
+
+              now:
+                request.query
+                  .asOf ??
+                this.clock(),
+            })
+
+        : retrieveBrainGraph(
+            graph,
+            {
+              ...request.query,
+
+              maxHops:
+                Math.min(
+                  request.query
+                    .maxHops,
+
+                  request.budget
+                    .maxHops,
+                ),
+
+              limit:
+                Math.min(
+                  request.query
+                    .limit,
+
+                  request.budget
+                    .maxResults,
+                ),
+
+              nodeTypes:
+                request
+                  .requestedNodeTypes
+                  .length >
+                0
+                  ? request
+                      .requestedNodeTypes
+                  : request.query
+                      .nodeTypes,
+            },
+            {
+              now:
+                request.query
+                  .asOf ??
+                this.clock(),
+            },
+          );
 
     const authorized = retrieval.filter(
       (result) =>
@@ -185,9 +230,22 @@ export class BrainGateway {
       graphRevisionBefore: graph.revision,
       graphRevisionAfter: graph.revision,
       metadata: {
-        intent: request.intent,
-        returned: budgeted.results.length,
-        truncated: budgeted.truncated,
+        intent:
+          request.intent,
+
+        returned:
+          budgeted
+            .results
+            .length,
+
+        truncated:
+          budgeted
+            .truncated,
+
+        retrievalBackend:
+          this.retrievalBackend
+            ?.id ??
+          'internal-brain-graph',
       },
     });
 

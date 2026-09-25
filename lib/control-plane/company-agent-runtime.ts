@@ -20,8 +20,8 @@ import {
 } from '@/lib/control-plane/agent-tool-runtime';
 
 import {
-  EmptyAgentBrainContextProvider,
-} from '@/lib/control-plane/brain-context-provider';
+  getStartupBrainContextProvider,
+} from '@/lib/control-plane/startup-brain-runtime';
 
 import {
   getCompanyAgentRuntimeProfile,
@@ -64,6 +64,13 @@ export function createCompanyAgentRuntimeWorker(
     new EnvironmentRuntimeSecretSource(
       process.env,
     );
+  
+
+  const brainContext =
+  getStartupBrainContextProvider(
+    process.env,
+  );
+
 
   const modelAdapter =
     new AssignedOmniRouteModelAdapter({
@@ -116,8 +123,7 @@ export function createCompanyAgentRuntimeWorker(
 
     modelAdapter,
 
-    brainContext:
-      new EmptyAgentBrainContextProvider(),
+    brainContext,
 
     toolRegistry,
 

@@ -21,7 +21,10 @@ describe(
       async () => {
         process.env.STARTUP_DB =
           ':memory:';
-
+        
+        process.env.STARTUP_BRAIN_RUNTIME_MODE =
+          'disabled';
+        
         process.env.STARTUP_CONTROL_PLANE_DB =
           ':memory:';
 

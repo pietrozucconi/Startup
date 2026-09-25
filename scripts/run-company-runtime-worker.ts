@@ -33,6 +33,11 @@ import {
 } from '@/lib/control-plane/handoff-router';
 
 import {
+  clearCompanyRuntimeHeartbeat,
+  writeCompanyRuntimeHeartbeat,
+} from '@/lib/control-plane/company-runtime-heartbeat';
+
+import {
   ReliableOutboxWorker,
 } from '@/lib/control-plane/outbox-worker';
 
@@ -109,6 +114,33 @@ async function main() {
       'invalid_STARTUP_AGENT_RUNTIME_POLL_MS',
     );
   }
+
+
+
+  const runtimeStartedAt =
+    new Date()
+      .toISOString();
+
+
+  const writeHeartbeat =
+    () => {
+      writeCompanyRuntimeHeartbeat({
+        processId:
+          process.pid,
+
+        startedAt:
+          runtimeStartedAt,
+
+        lastHeartbeatAt:
+          new Date()
+            .toISOString(),
+
+        pollIntervalMs,
+      });
+    };
+
+
+  writeHeartbeat();
 
 
   let stopping =
@@ -209,6 +241,7 @@ async function main() {
   while (
     !stopping
   ) {
+    writeHeartbeat();
     try {
       const now =
         new Date().toISOString();
@@ -289,7 +322,7 @@ async function main() {
     }
   }
 
-
+  clearCompanyRuntimeHeartbeat();
   console.log(
     '=== COMPANY AGENT RUNTIME STOPPED ===\n',
   );

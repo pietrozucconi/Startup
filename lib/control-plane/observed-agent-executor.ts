@@ -1,4 +1,8 @@
 import {
+  randomUUID,
+} from 'node:crypto';
+
+import {
   AgentExecutorOutputSchema,
   type AgentExecutor,
   type AgentExecutorContext,
@@ -76,7 +80,7 @@ export class ObservedAgentExecutor
     context: AgentExecutorContext,
   ): Promise<AgentExecutorOutputInput> {
     const runId =
-      `execution-run:${context.task.taskId}:attempt:${context.task.attempts}`;
+      `execution-run:${context.task.taskId}:attempt:${context.task.attempts}:${randomUUID()}`;
 
     this.store.startExecutionRun({
       runId,

@@ -82,6 +82,343 @@ function store() {
 describe(
   'V2I.2B execution run ledger',
   () => {
+
+    test(
+      'records a new execution run after a dead-letter task is redriven',
+      async () => {
+        const cp = store();
+
+        const profile =
+          getCompanyAgentRuntimeProfile(
+            'lauti',
+          );
+
+
+        cp.upsertAgentRuntimeTask({
+          taskId:
+            'task-redrive',
+
+          handoffId:
+            'handoff-redrive',
+
+          agentId:
+            'lauti',
+
+          action:
+            'noop',
+
+          summary:
+            'Redrive execution ledger test.',
+
+          createdAt:
+            '2026-01-01T00:00:00.000Z',
+
+          availableAt:
+            '2026-01-01T00:00:00.000Z',
+
+          updatedAt:
+            '2026-01-01T00:00:00.000Z',
+
+          retryPolicy: {
+            maxAttempts:
+              1,
+
+            initialDelayMs:
+              1000,
+
+            backoffMultiplier:
+              2,
+
+            maxDelayMs:
+              1000,
+
+            timeoutMs:
+              30000,
+          },
+
+          policyEvidence:
+            [],
+
+          payload:
+            {},
+        });
+
+
+        const firstAuthority =
+          new HmacRuntimeIdentityAuthority(
+            '0123456789abcdef0123456789abcdef',
+
+            () =>
+              '2026-01-01T00:00:00.000Z',
+
+            () =>
+              'session-first',
+          );
+
+
+        const firstToken =
+          firstAuthority
+            .issueAgentSession({
+              profile,
+
+              ttlMs:
+                60000,
+            })
+            .token;
+
+
+        const failingModel:
+          AgentModelAdapter = {
+          id:
+            'failing-model',
+
+          async execute() {
+            throw new Error(
+              'first_run_failed',
+            );
+          },
+        };
+
+
+        const firstWorker =
+          new TrustedCompanyAgentRuntimeWorker({
+            agentId:
+              'lauti',
+
+            identityToken:
+              firstToken,
+
+            identityVerifier:
+              firstAuthority,
+
+            store:
+              cp,
+
+            modelAdapter:
+              failingModel,
+
+            brainContext:
+              new EmptyAgentBrainContextProvider(),
+
+            toolRegistry:
+              new AgentReadToolRegistry(),
+
+            runner: {
+              workerId:
+                'worker-first',
+
+              batchSize:
+                1,
+
+              leaseMs:
+                30000,
+            },
+
+            clock: () =>
+              '2026-01-01T00:00:30.000Z',
+          });
+
+
+        const firstResult =
+          await firstWorker.runOnce();
+
+
+        expect(
+          firstResult,
+        ).toMatchObject({
+          claimed:
+            1,
+
+          completed:
+            0,
+
+          failed:
+            1,
+        });
+
+
+        expect(
+          cp.listAgentRuntimeTasks({
+            status:
+              'dead_letter',
+          }),
+        ).toHaveLength(1);
+
+
+        cp.redriveAgentRuntimeTask({
+          taskId:
+            'task-redrive',
+
+          requestedAt:
+            '2026-01-01T00:01:00.000Z',
+
+          reason:
+            'Retry after execution failure.',
+        });
+
+
+        const secondAuthority =
+          new HmacRuntimeIdentityAuthority(
+            '0123456789abcdef0123456789abcdef',
+
+            () =>
+              '2026-01-01T00:01:00.000Z',
+
+            () =>
+              'session-second',
+          );
+
+
+        const secondToken =
+          secondAuthority
+            .issueAgentSession({
+              profile,
+
+              ttlMs:
+                60000,
+            })
+            .token;
+
+
+        const successfulModel:
+          AgentModelAdapter = {
+          id:
+            'successful-model',
+
+          async execute() {
+            return {
+              model:
+                'successful-model-v1',
+
+              usage: {
+                inputTokens:
+                  10,
+
+                outputTokens:
+                  5,
+              },
+
+              output: {
+                summary:
+                  'Recovered after redrive.',
+
+                operations:
+                  [],
+              },
+            };
+          },
+        };
+
+
+        const secondWorker =
+          new TrustedCompanyAgentRuntimeWorker({
+            agentId:
+              'lauti',
+
+            identityToken:
+              secondToken,
+
+            identityVerifier:
+              secondAuthority,
+
+            store:
+              cp,
+
+            modelAdapter:
+              successfulModel,
+
+            brainContext:
+              new EmptyAgentBrainContextProvider(),
+
+            toolRegistry:
+              new AgentReadToolRegistry(),
+
+            runner: {
+              workerId:
+                'worker-second',
+
+              batchSize:
+                1,
+
+              leaseMs:
+                30000,
+            },
+
+            clock: () =>
+              '2026-01-01T00:01:30.000Z',
+          });
+
+
+        const secondResult =
+          await secondWorker.runOnce();
+
+
+        expect(
+          secondResult,
+        ).toMatchObject({
+          claimed:
+            1,
+
+          completed:
+            1,
+
+          failed:
+            0,
+        });
+
+
+        const runs =
+          cp.listExecutionRuns({
+            taskId:
+              'task-redrive',
+          });
+
+
+        expect(
+          runs,
+        ).toHaveLength(2);
+
+
+        expect(
+          new Set(
+            runs.map(
+              (
+                run,
+              ) =>
+                run.runId,
+            ),
+          ).size,
+        ).toBe(2);
+
+
+        expect(
+          runs.map(
+            (
+              run,
+            ) =>
+              run.status,
+          ),
+        ).toEqual([
+          'succeeded',
+          'failed',
+        ]);
+
+
+        expect(
+          cp.listAgentRuntimeTasks({
+            agentId:
+              'lauti',
+          })[0].status,
+        ).toBe(
+          'completed',
+        );
+
+
+        cp.close();
+      },
+    );
+
+
     test(
       'records model usage and estimated cost for a successful run',
       async () => {

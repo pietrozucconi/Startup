@@ -1,0 +1,518 @@
+﻿'use client';
+
+import {
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import * as THREE from 'three';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+const DEPARTMENT_COLORS: Record<string, number> = {
+  'dept-research': 0xf97316,
+  'dept-risk': 0x10b981,
+  'dept-monitoring': 0x38bdf8,
+};
+
+const DEPARTMENT_LABELS: Record<string, string> = {
+  'dept-research': 'Research Investments',
+  'dept-risk': 'Risk Analysis',
+  'dept-monitoring': 'Monitoring & Performance',
+};
+
+type AgentTopology = {
+  id: string;
+  name: string;
+  role: string;
+  departmentId: string;
+  departmentName: string;
+  tier: string;
+  status: string;
+  model: string;
+  tools: string[];
+  brainAccess: boolean;
+  retrievalAccess: {
+    startupMemory: boolean;
+    startupBrain: boolean;
+    gatewayEnforced: boolean;
+    fullMemoryDumpAllowed: boolean;
+    fullBrainDumpAllowed: boolean;
+  };
+};
+
+type TopologyPayload = {
+  generatedAt: string;
+  retrieval: {
+    gateway: string;
+    fullDumpAllowed: boolean;
+    modes: string[];
+  };
+  agents: AgentTopology[];
+  operationalMemory: {
+    experiences: number;
+    decisions: number;
+    validatedLessons: number;
+  };
+};
+
+function createTextSprite(
+  text: string,
+  options: {
+    color?: string;
+    fontSize?: number;
+    width?: number;
+    height?: number;
+    scale?: [number, number];
+  } = {},
+) {
+  const width = options.width ?? 1024;
+  const height = options.height ?? 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('2D canvas context unavailable');
+  }
+
+  context.clearRect(0, 0, width, height);
+  context.font = `700 ${options.fontSize ?? 64}px ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace`;
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.fillStyle = options.color ?? '#f5f5f5';
+  context.fillText(text, width / 2, height / 2);
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+  });
+
+  const sprite = new THREE.Sprite(material);
+  const scale = options.scale ?? [6.4, 1.6];
+  sprite.scale.set(scale[0], scale[1], 1);
+
+  return sprite;
+}
+
+function createLine(
+  start: THREE.Vector3,
+  end: THREE.Vector3,
+  color: number,
+  opacity: number,
+) {
+  const geometry = new THREE.BufferGeometry().setFromPoints([
+    start,
+    end,
+  ]);
+  const material = new THREE.LineBasicMaterial({
+    color,
+    transparent: true,
+    opacity,
+  });
+
+  return new THREE.Line(geometry, material);
+}
+
+function disposeObject(object: THREE.Object3D) {
+  object.traverse((child) => {
+    const mesh = child as THREE.Mesh;
+    if (mesh.geometry) {
+      mesh.geometry.dispose();
+    }
+
+    const material = (mesh as unknown as { material?: THREE.Material | THREE.Material[] }).material;
+    if (Array.isArray(material)) {
+      material.forEach((item) => item.dispose());
+    } else if (material) {
+      material.dispose();
+    }
+  });
+}
+
+export function StartupBrain3D() {
+  const mountRef = useRef<HTMLDivElement | null>(null);
+  const [topology, setTopology] = useState<TopologyPayload | null>(null);
+  const [selectedAgent, setSelectedAgent] = useState<AgentTopology | null>(null);
+  const [hoveredAgent, setHoveredAgent] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        const response = await fetch('/api/brain/topology', {
+          cache: 'no-store',
+        });
+
+        if (!response.ok) {
+          throw new Error(`topology_http_${response.status}`);
+        }
+
+        const payload = (await response.json()) as TopologyPayload;
+        if (!cancelled) {
+          setTopology(payload);
+          setError(null);
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(
+            loadError instanceof Error
+              ? loadError.message
+              : 'Unable to load Startup Brain topology',
+          );
+        }
+      }
+    };
+
+    void load();
+    const timer = window.setInterval(load, 10000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const mount = mountRef.current;
+    if (!mount || !topology) return;
+
+    const scene = new THREE.Scene();
+    scene.fog = new THREE.FogExp2(0x090909, 0.014);
+
+    const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 150);
+    camera.position.set(0, 5.5, 31);
+
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    mount.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.enablePan = false;
+    controls.minDistance = 14;
+    controls.maxDistance = 52;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.32;
+
+    const world = new THREE.Group();
+    scene.add(world);
+
+    scene.add(new THREE.AmbientLight(0xffffff, 1.25));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.4);
+    keyLight.position.set(8, 12, 16);
+    scene.add(keyLight);
+
+    const memoryRadius = 17;
+
+    const memoryShell = new THREE.Mesh(
+      new THREE.SphereGeometry(memoryRadius, 40, 28),
+      new THREE.MeshBasicMaterial({
+        color: 0x7a7a7a,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.11,
+      }),
+    );
+    world.add(memoryShell);
+
+    const memoryGlow = new THREE.Mesh(
+      new THREE.SphereGeometry(memoryRadius - 0.15, 40, 28),
+      new THREE.MeshBasicMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.012,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+      }),
+    );
+    world.add(memoryGlow);
+
+    const memoryLabel = createTextSprite('STARTUP MEMORY', {
+      color: '#9ca3af',
+      fontSize: 66,
+      scale: [8.5, 2.1],
+    });
+    memoryLabel.position.set(0, 15.1, 0);
+    world.add(memoryLabel);
+
+    const brain = new THREE.Mesh(
+      new THREE.SphereGeometry(2.6, 36, 28),
+      new THREE.MeshStandardMaterial({
+        color: 0x6b6b6b,
+        roughness: 0.78,
+        metalness: 0.08,
+      }),
+    );
+    brain.userData.kind = 'brain';
+    world.add(brain);
+
+    const brainHalo = new THREE.Mesh(
+      new THREE.SphereGeometry(3.2, 32, 24),
+      new THREE.MeshBasicMaterial({
+        color: 0xef4444,
+        transparent: true,
+        opacity: 0.045,
+        wireframe: true,
+      }),
+    );
+    world.add(brainHalo);
+
+    const brainLabel = createTextSprite('STARTUP BRAIN', {
+      color: '#ffffff',
+      fontSize: 68,
+      scale: [7.2, 1.8],
+    });
+    brainLabel.position.set(0, -3.55, 0);
+    world.add(brainLabel);
+
+    const agentMeshes: THREE.Mesh[] = [];
+
+    const byDepartment = new Map<string, AgentTopology[]>();
+    for (const agent of topology.agents) {
+      const current = byDepartment.get(agent.departmentId) ?? [];
+      current.push(agent);
+      byDepartment.set(agent.departmentId, current);
+    }
+
+    const departmentBaseAngles: Record<string, number> = {
+      'dept-research': Math.PI / 2,
+      'dept-risk': -Math.PI / 6,
+      'dept-monitoring': (7 * Math.PI) / 6,
+    };
+
+    for (const [departmentId, agents] of byDepartment.entries()) {
+      const baseAngle = departmentBaseAngles[departmentId] ?? 0;
+      const color = DEPARTMENT_COLORS[departmentId] ?? 0xa3a3a3;
+
+      agents.forEach((agent, index) => {
+        const centered = index - (agents.length - 1) / 2;
+        const angle = baseAngle + centered * 0.135;
+        const radius = 8.1 + (index % 3) * 1.15;
+        const z = ((index % 2 === 0 ? 1 : -1) * (1.1 + (index % 3) * 0.75));
+
+        const position = new THREE.Vector3(
+          Math.cos(angle) * radius,
+          Math.sin(angle) * radius,
+          z,
+        );
+
+        const mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.68, 24, 18),
+          new THREE.MeshStandardMaterial({
+            color,
+            roughness: 0.58,
+            metalness: 0.12,
+          }),
+        );
+        mesh.position.copy(position);
+        mesh.userData = {
+          kind: 'agent',
+          agent,
+        };
+        world.add(mesh);
+        agentMeshes.push(mesh);
+
+        const nameLabel = createTextSprite(agent.name, {
+          color: `#${color.toString(16).padStart(6, '0')}`,
+          fontSize: 58,
+          scale: [3.4, 0.85],
+        });
+        nameLabel.position.copy(position.clone().add(new THREE.Vector3(0, 1.05, 0)));
+        world.add(nameLabel);
+
+        world.add(
+          createLine(
+            position.clone().multiplyScalar(0.92),
+            position.clone().normalize().multiplyScalar(2.85),
+            color,
+            0.34,
+          ),
+        );
+
+        const memoryPoint = position
+          .clone()
+          .normalize()
+          .multiplyScalar(memoryRadius - 0.25);
+
+        world.add(
+          createLine(
+            position.clone().multiplyScalar(1.06),
+            memoryPoint,
+            color,
+            0.24,
+          ),
+        );
+      });
+
+      const labelPosition = new THREE.Vector3(
+        Math.cos(baseAngle) * 12.6,
+        Math.sin(baseAngle) * 12.6,
+        0,
+      );
+
+      const departmentLabel = createTextSprite(
+        DEPARTMENT_LABELS[departmentId] ?? departmentId,
+        {
+          color: `#${color.toString(16).padStart(6, '0')}`,
+          fontSize: 48,
+          scale: [6.5, 1.3],
+        },
+      );
+      departmentLabel.position.copy(labelPosition);
+      world.add(departmentLabel);
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+
+    const updatePointer = (event: PointerEvent) => {
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      return raycaster.intersectObjects(agentMeshes, false);
+    };
+
+    const onPointerMove = (event: PointerEvent) => {
+      const intersections = updatePointer(event);
+      const agent = intersections[0]?.object.userData.agent as AgentTopology | undefined;
+      renderer.domElement.style.cursor = agent ? 'pointer' : 'grab';
+      setHoveredAgent(agent?.name ?? null);
+    };
+
+    const onPointerDown = (event: PointerEvent) => {
+      const intersections = updatePointer(event);
+      const agent = intersections[0]?.object.userData.agent as AgentTopology | undefined;
+      if (agent) {
+        setSelectedAgent(agent);
+      }
+    };
+
+    renderer.domElement.addEventListener('pointermove', onPointerMove);
+    renderer.domElement.addEventListener('pointerdown', onPointerDown);
+
+    const resize = () => {
+      const width = Math.max(mount.clientWidth, 1);
+      const height = Math.max(mount.clientHeight, 1);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    };
+
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(mount);
+    resize();
+
+    let animationFrame = 0;
+    const animate = () => {
+      animationFrame = window.requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    return () => {
+      window.cancelAnimationFrame(animationFrame);
+      resizeObserver.disconnect();
+      renderer.domElement.removeEventListener('pointermove', onPointerMove);
+      renderer.domElement.removeEventListener('pointerdown', onPointerDown);
+      controls.dispose();
+      disposeObject(world);
+      renderer.dispose();
+      renderer.domElement.remove();
+      setHoveredAgent(null);
+    };
+  }, [topology]);
+
+  return (
+    <div className="relative overflow-hidden rounded-lg-t border border-os-border bg-[#050505]">
+      <div className="absolute left-4 top-4 z-10 max-w-[420px] rounded-md-t border border-os-border bg-black/75 px-4 py-3 backdrop-blur">
+        <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
+          Dual retrieval architecture
+        </div>
+        <div className="mt-1 text-sm font-semibold text-white">
+          Startup Memory â†” Employees â†” Startup Brain
+        </div>
+        <p className="mt-1 text-xs leading-relaxed text-os-muted">
+          Every employee queries both systems through the Brain Gateway. Only relevant context is returned; full-memory and full-brain dumps are forbidden.
+        </p>
+      </div>
+
+      <div className="absolute right-4 top-4 z-10 rounded-md-t border border-os-border bg-black/75 px-3 py-2 font-mono text-[10px] uppercase tracking-[0.15em] text-os-muted backdrop-blur">
+        {topology ? `${topology.agents.length} employees` : 'loading'}
+      </div>
+
+      {hoveredAgent ? (
+        <div className="absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-md-t border border-os-border bg-black/80 px-3 py-2 text-xs text-white backdrop-blur">
+          {hoveredAgent}
+        </div>
+      ) : null}
+
+      <div
+        ref={mountRef}
+        className="h-[680px] w-full"
+        aria-label="Interactive three-dimensional Startup Brain topology"
+      />
+
+      <div className="absolute bottom-4 left-4 z-10 flex flex-wrap gap-2 rounded-md-t border border-os-border bg-black/75 px-3 py-2 text-[10px] backdrop-blur">
+        <span className="text-orange-400">â— Research</span>
+        <span className="text-emerald-400">â— Risk</span>
+        <span className="text-sky-400">â— Monitoring</span>
+        <span className="text-os-dim">drag to rotate Â· wheel to zoom Â· click an employee</span>
+      </div>
+
+      <aside className="absolute bottom-4 right-4 z-10 w-[310px] rounded-md-t border border-os-border bg-black/80 p-4 backdrop-blur">
+        {selectedAgent ? (
+          <>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
+              Selected employee
+            </div>
+            <div className="mt-2 text-base font-semibold text-white">
+              {selectedAgent.name}
+            </div>
+            <div className="mt-1 text-xs text-os-muted">
+              {selectedAgent.role}
+            </div>
+            <div className="mt-3 space-y-1 font-mono text-[10px] text-os-dim">
+              <div>department: {selectedAgent.departmentName}</div>
+              <div>model: {selectedAgent.model}</div>
+              <div>memory retrieval: enabled</div>
+              <div>brain retrieval: {selectedAgent.brainAccess ? 'enabled' : 'disabled'}</div>
+              <div>gateway enforced: yes</div>
+              <div>full dump: forbidden</div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="font-mono text-[10px] uppercase tracking-[0.18em] text-os-dim">
+              Retrieval model
+            </div>
+            <p className="mt-2 text-xs leading-relaxed text-os-muted">
+              Select an employee to inspect its role, current AI model and access to Startup Memory and Startup Brain.
+            </p>
+          </>
+        )}
+      </aside>
+
+      {error ? (
+        <div className="absolute left-4 right-4 top-24 z-20 border border-red-500/30 bg-red-950/80 px-4 py-3 text-xs text-red-200">
+          Unable to load live topology: {error}
+        </div>
+      ) : null}
+    </div>
+  );
+}

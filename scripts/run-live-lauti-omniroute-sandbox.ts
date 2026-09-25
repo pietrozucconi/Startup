@@ -19,8 +19,31 @@ import {
 } from '@/lib/control-plane/atomic-engine';
 
 import {
-  EmptyAgentBrainContextProvider,
+  BrainGatewayAgentContextProvider,
 } from '@/lib/control-plane/brain-context-provider';
+
+import {
+  BrainGateway,
+} from '@/lib/brain/gateway/gateway';
+
+import {
+  InMemoryBrainAuditStore,
+  InMemoryBrainGraphStore,
+} from '@/lib/brain/gateway/store';
+
+import {
+  createEmptyBrainGraph,
+} from '@/lib/brain/graph-ops';
+
+import {
+  CogneeRecallClient,
+} from '@/lib/brain/cognee/cognee-recall-client';
+
+import {
+  CogneeBrainRetrievalBackend,
+} from '@/lib/brain/cognee/cognee-brain-retrieval-backend';
+
+
 
 import {
   AssignedOmniRouteModelAdapter,
@@ -130,6 +153,10 @@ async function main() {
 
 requireSecret(
   'OMNIROUTE_API_KEY',
+);
+
+requireSecret(
+  'COGNEE_API_PASSWORD',
 );
 
 
@@ -328,7 +355,7 @@ if (
           'ceo',
 
         startupBrainEnabled:
-          false,
+          true,
 
         externalResearchToolsEnabled:
           false,
@@ -389,7 +416,9 @@ if (
       summary: [
         `Create a sandbox-only research proposal skeleton for ${symbol}.`,
         'This task exists only to validate the company runtime and model gateway.',
-        'No Startup Brain context or external research tools are enabled in this test.',
+        'Startup Brain context is enabled for this test.',
+        'Use relevant institutional memory supplied by Startup Brain.',
+        'External research tools remain disabled.',
         'Do not claim or invent current market facts, prices, financial results, news or filings.',
         'Explicitly state that no live external evidence was used.',
         'Register exactly one research_proposal artifact.',
@@ -432,7 +461,7 @@ if (
       policyEvidence: [
         'sandbox:v2k1a-omniroute',
         `manual-model:${configuredModel}`,
-        'startup-brain:disabled-for-connectivity-test',
+        'startup-brain:enabled-via-cognee',
         'external-tools:disabled-for-connectivity-test',
         'financial-execution:forbidden',
       ],
@@ -450,7 +479,7 @@ if (
           'manual',
 
         startupBrainEnabled:
-          false,
+          true,
 
         externalResearchToolsEnabled:
           false,
@@ -458,7 +487,7 @@ if (
     });
 
 
-    const secretSource =
+const secretSource =
   new EnvironmentRuntimeSecretSource(
     process.env,
   );
@@ -466,6 +495,85 @@ if (
 
 const toolRegistry =
   new AgentReadToolRegistry();
+
+const cogneeBaseUrl =
+  process.env
+    .COGNEE_BASE_URL ??
+  'http://127.0.0.1:8000';
+
+
+const cogneeEmail =
+  process.env
+    .COGNEE_API_EMAIL ??
+  'default_user@example.com';
+
+
+const cogneeDataset =
+  process.env
+    .COGNEE_DATASET ??
+  'startup_brain_smoke';
+
+
+const cogneeClient =
+  new CogneeRecallClient({
+    baseUrl:
+      cogneeBaseUrl,
+
+    email:
+      cogneeEmail,
+
+    passwordSecretName:
+      'COGNEE_API_PASSWORD',
+
+    secretSource,
+  });
+
+
+const cogneeRetrievalBackend =
+  new CogneeBrainRetrievalBackend({
+    client:
+      cogneeClient,
+
+    dataset:
+      cogneeDataset,
+
+    readableByAgentIds: [
+      'lauti',
+    ],
+
+    readableByDepartmentIds: [
+      'dept-research',
+    ],
+  });
+
+
+const brainGraphStore =
+  new InMemoryBrainGraphStore(
+    createEmptyBrainGraph(
+      'startup-brain-runtime',
+      new Date()
+        .toISOString(),
+    ),
+  );
+
+
+const brainAuditStore =
+  new InMemoryBrainAuditStore();
+
+
+const brainGateway =
+  new BrainGateway(
+    brainGraphStore,
+    brainAuditStore,
+    undefined,
+    cogneeRetrievalBackend,
+  );
+
+
+const brainContext =
+  new BrainGatewayAgentContextProvider(
+    brainGateway,
+  );
 
 
 const modelAdapter =
@@ -506,8 +614,7 @@ const modelAdapter =
 
         modelAdapter,
 
-        brainContext:
-          new EmptyAgentBrainContextProvider(),
+        brainContext,
 
         toolRegistry,
 
@@ -726,6 +833,9 @@ const modelAdapter =
         | {
             metadata?: {
               runtime?: {
+                brainNodeIds?:
+                  string[];
+
                 modelMetadata?: {
                   modelAssignment?: {
                     pinnedModel?:
@@ -740,7 +850,14 @@ const modelAdapter =
           }
         | undefined;
 
+    const startupBrainNodeIds =
+      runtimeResult
+        ?.metadata
+        ?.runtime
+        ?.brainNodeIds ??
+      [];
 
+    
     const modelAssignment =
       runtimeResult
         ?.metadata
@@ -801,7 +918,12 @@ console.log(
         'RESEARCHING',
 
       startupBrainUsed:
-        false,
+        startupBrainNodeIds.length >
+        0,
+
+      startupBrainNodeIds,
+
+      cogneeDataset,
 
       externalToolsEnabled:
         false,
@@ -821,28 +943,32 @@ if (
   !succeededRun ||
   !researchProposalRegistered ||
   pinnedModel !==
-    configuredModel
+    configuredModel ||
+  startupBrainNodeIds.length ===
+    0
 ) {
   process.exitCode =
     1;
 }
 
 
-        console.log(
-      '\n=== V2K.1A OMNIROUTE LIVE SANDBOX END ===\n',
-    );
-  } finally {
-    if (
-      worker
-    ) {
-      try {
-        worker.stop(
-          'omniroute_live_sandbox_completed',
-        );
-      } catch {
-        // Best-effort sandbox cleanup only.
-      }
+console.log(
+  '\n=== V2K.1A OMNIROUTE LIVE SANDBOX END ===\n',
+);
+
+
+} finally {
+  if (
+    worker
+  ) {
+    try {
+      worker.stop(
+        'omniroute_live_sandbox_completed',
+      );
+    } catch {
+      // Best-effort sandbox cleanup only.
     }
+  }
 
     store.close();
     companyDb.close();

@@ -1,0 +1,176 @@
+
+> startup@1.0.0 dev
+> next dev -p 4100
+
+  ▲ Next.js 14.2.35
+  - Local:        http://localhost:4100
+  - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 3.4s
+ ✓ Compiled /middleware in 498ms (116 modules)
+ ○ Compiling / ...
+ ✓ Compiled / in 4.4s (687 modules)
+ GET / 200 in 4736ms
+ ○ Compiling /icon.svg ...
+ ✓ Compiled /icon.svg in 3.5s (416 modules)
+ GET /icon.svg?907e2fdcb17acb5d 200 in 3575ms
+ ○ Compiling /brain ...
+ ✓ Compiled /brain in 1190ms (723 modules)
+ ✓ Compiled /api/brain/topology in 179ms (450 modules)
+ GET /api/brain/topology 200 in 286ms
+ GET /api/brain/topology 200 in 288ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 15ms
+ GET /api/brain/topology 200 in 16ms
+ GET /brain 200 in 215ms
+ GET /icon.svg?907e2fdcb17acb5d 200 in 36ms
+ GET /api/brain/topology 200 in 40ms
+ GET /api/brain/topology 200 in 39ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 20ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 20ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 18ms
+ GET /api/brain/topology 200 in 18ms
+ GET /api/brain/topology 200 in 19ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 17ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 15ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 58ms
+ GET /api/brain/topology 200 in 17ms
+ GET /api/brain/topology 200 in 15ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 17ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 11ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 13ms
+ ✓ Compiled in 890ms (720 modules)
+ GET /api/brain/topology 200 in 50ms
+ GET /api/brain/topology 200 in 58ms
+ GET /api/brain/topology 200 in 9ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 12ms
+ GET /brain 200 in 195ms
+ ✓ Compiled /icon.svg in 155ms (450 modules)
+ GET /api/brain/topology 200 in 364ms
+ GET /api/brain/topology 200 in 366ms
+ GET /icon.svg?907e2fdcb17acb5d 200 in 422ms
+ GET /api/brain/topology 200 in 13ms
+ GET /brain 200 in 111ms
+ GET /icon.svg?907e2fdcb17acb5d 200 in 13ms
+ GET /api/brain/topology 200 in 23ms
+ GET /api/brain/topology 200 in 26ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 15ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 14ms
+ GET /api/brain/topology 200 in 13ms
+ GET /api/brain/topology 200 in 12ms
+ GET /api/brain/topology 200 in 17ms
+ GET /api/brain/topology 200 in 15ms
+ GET /api/brain/topology 200 in 13ms
+ ○ Compiling /org ...
+ ✓ Compiled /org in 703ms (724 modules)
+ ○ Compiling /control-plane ...
+ ✓ Compiled /control-plane in 829ms (770 modules)
+ ✓ Compiled /integrations in 504ms (791 modules)
+ ✓ Compiled /api/runtime/health in 182ms (501 modules)
+ GET /api/runtime/health 200 in 914ms
+ ✓ Compiled /analytics in 287ms (797 modules)
+ ✓ Compiled /workflows in 308ms (792 modules)
+ ✓ Compiled /approvals in 328ms (798 modules)

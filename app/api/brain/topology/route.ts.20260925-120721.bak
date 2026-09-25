@@ -1,0 +1,93 @@
+﻿import { NextResponse } from 'next/server';
+
+import { getDb } from '@/lib/data';
+import {
+  getCompanyAgentRuntimeProfile,
+} from '@/lib/control-plane/agent-runtime-profile';
+
+export const dynamic = 'force-dynamic';
+
+export function GET() {
+  const db = getDb();
+
+  const departments = [...db.departments.all()].sort(
+    (a, b) => a.order - b.order,
+  );
+
+  const agents = [...db.agents.all()].sort(
+    (a, b) => a.name.localeCompare(b.name),
+  );
+
+  const departmentsById = new Map(
+    departments.map((department) => [department.id, department]),
+  );
+
+  return NextResponse.json(
+    {
+      generatedAt: new Date().toISOString(),
+      systems: {
+        memory: {
+          id: 'startup-memory',
+          label: 'Startup Memory',
+          purpose:
+            'Canonical company knowledge: identity, organization, governance, policies, agent instructions, runtime profiles, tools, models and approved procedures.',
+        },
+        brain: {
+          id: 'startup-brain',
+          label: 'Startup Brain',
+          purpose:
+            'Experiential company knowledge: reasoning summaries, decisions, outcomes, errors, reviews, lessons and reusable organizational experience.',
+        },
+      },
+      retrieval: {
+        gateway: 'Brain Gateway',
+        fullDumpAllowed: false,
+        modes: [
+          'keyword_similarity',
+          'semantic_similarity',
+          'contextual_similarity',
+          'graph_relationships',
+        ],
+      },
+      departments: departments.map((department) => ({
+        id: department.id,
+        name: department.name,
+        order: department.order,
+      })),
+      agents: agents.map((agent) => {
+        const profile = getCompanyAgentRuntimeProfile(agent.id);
+        const department = departmentsById.get(agent.departmentId);
+
+        return {
+          id: agent.id,
+          name: agent.name,
+          role: agent.role,
+          departmentId: agent.departmentId,
+          departmentName: department?.name ?? agent.departmentId,
+          tier: agent.tier,
+          status: agent.status,
+          model: agent.model,
+          tools: profile.allowedToolCapabilities,
+          brainAccess: profile.brain.enabled,
+          retrievalAccess: {
+            startupMemory: true,
+            startupBrain: profile.brain.enabled,
+            gatewayEnforced: true,
+            fullMemoryDumpAllowed: false,
+            fullBrainDumpAllowed: false,
+          },
+        };
+      }),
+      operationalMemory: {
+        experiences: 0,
+        decisions: 0,
+        validatedLessons: 0,
+      },
+    },
+    {
+      headers: {
+        'Cache-Control': 'no-store',
+      },
+    },
+  );
+}

@@ -1,0 +1,50 @@
+
+[2m2026-09-25T08:39:53.513825[0m [[32m[1minfo     [0m] [1mDeleted old log file: C:\Users\pietr\.cognee\logs\2026-09-23_16-15-35.log[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-09-25T08:39:53.517537[0m [[32m[1minfo     [0m] [1mLog file created at: C:\Users\pietr\.cognee\logs\2026-09-25_08-39-52.log[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mlog_file[0m=[35mC:\Users\pietr\.cognee\logs\2026-09-25_08-39-52.log[0m
+
+[2m2026-09-25T08:39:53.517977[0m [[33m[1mwarning  [0m] [1mCognee 1.0 changes: New API — remember/recall/forget/improve (V1 add/cognify/search still work). Session memory enabled by default (CACHING=false to disable). Multi-user access control on by default (ENABLE_BACKEND_ACCESS_CONTROL=false to disable). Agents (@cognee.agent) auto-verified on registration. See https://docs.cognee.ai/[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-09-25T08:39:53.518544[0m [[32m[1minfo     [0m] [1mLogging initialized           [0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m [36mcognee_version[0m=[35m1.6.0-local[0m [36mdatabase_path[0m=[35mC:\Progetti\Cognee\cognee\.cognee_system\databases[0m [36mos_info[0m=[35m'Windows 11 (10.0.26200)'[0m [36mpython_version[0m=[35m3.13.15[0m [36mstructlog_version[0m=[35m25.5.0[0m
+
+[2m2026-09-25T08:39:53.518968[0m [[32m[1minfo     [0m] [1mDatabase storage: C:\Progetti\Cognee\cognee\.cognee_system\databases[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-09-25T08:40:02.776802[0m [[32m[1minfo     [0m] [1mauth posture: authentication=required, multi_tenant=enabled (default (no env vars set))[0m [[0m[1m[34mget_authenticated_user[0m][0m
+C:\Progetti\Cognee\cognee\api\v1\add\routers\get_add_router.py:106: FastAPIDeprecationWarning: `example` has been deprecated, please use `examples` instead
+  node_set: list[str] | None = Form(default=[""], example=[""]),
+INFO:     Started server process [35236]
+INFO:     Waiting for application startup.
+
+[1msetup plugin alembic.autogenerate.schemas[0m
+
+[1msetup plugin alembic.autogenerate.tables[0m
+
+[1msetup plugin alembic.autogenerate.types[0m
+
+[1msetup plugin alembic.autogenerate.constraints[0m
+
+[1msetup plugin alembic.autogenerate.defaults[0m
+
+[1msetup plugin alembic.autogenerate.comments[0m
+
+[1msetup plugin alembic.ext.checkconstraint_byname[0m
+
+[1mUsing database: sqlite+aiosqlite:///C:\Progetti\Cognee\cognee\.cognee_system\databases/cognee_db[0m
+
+[1mContext impl SQLiteImpl.      [0m
+
+[1mWill assume non-transactional DDL.[0m
+
+[1mRelational migrations applied (target head).[0m
+
+[2m2026-09-25T08:40:08.532862[0m [[33m[1mwarning  [0m] [1mDEFAULT_USER_PASSWORD is unset: no default-user password login is configured. A default user created by the SDK or CLI has no password and cannot be logged into; set DEFAULT_USER_PASSWORD and restart to give it one (needed for the UI and any HTTP client). An account that already has a password keeps it.[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-09-25T08:40:08.559704[0m [[33m[1mwarning  [0m] [1mFASTAPI_USERS_JWT_SECRET is not set. A random secret was generated for this server process. Tokens signed with it are valid only for this process and only until it restarts. If you run more than one process (uvicorn workers, several replicas, or separate API and worker processes), set FASTAPI_USERS_JWT_SECRET in your .env to the same securely generated secret for every process.[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-09-25T08:40:08.560106[0m [[33m[1mwarning  [0m] [1mFASTAPI_USERS_RESET_PASSWORD_TOKEN_SECRET is not set. A random secret was generated for this server process. Password reset links stop working when it restarts. If you run more than one process (uvicorn workers, several replicas, or separate API and worker processes), set FASTAPI_USERS_RESET_PASSWORD_TOKEN_SECRET in your .env to the same securely generated secret for every process.[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-09-25T08:40:08.560419[0m [[33m[1mwarning  [0m] [1mFASTAPI_USERS_VERIFICATION_TOKEN_SECRET is not set. A random secret was generated for this server process. Email verification links stop working when it restarts. If you run more than one process (uvicorn workers, several replicas, or separate API and worker processes), set FASTAPI_USERS_VERIFICATION_TOKEN_SECRET in your .env to the same securely generated secret for every process.[0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+
+[2m2026-09-25T08:40:08.561973[0m [[32m[1minfo     [0m] [1mBackend server has started    [0m [[0m[1m[34mcognee.shared.logging_utils[0m][0m
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
